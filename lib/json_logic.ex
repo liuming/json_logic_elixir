@@ -15,6 +15,9 @@ defmodule JsonLogic do
     iex> JsonLogic.apply(%{"var" => "nested.key"}, %{"nested" => %{"key" => "value"}})
     "value"
 
+    iex> JsonLogic.apply(%{"var" => ["none", "default"]}, %{"key" => "value"})
+    "default"
+
     iex> JsonLogic.apply(%{"var" => 0}, ~w{a b})
     "a"
 
@@ -71,6 +74,93 @@ defmodule JsonLogic do
 
     iex> JsonLogic.apply(%{"and" => [true, 1, "truthy"]})
     "truthy"
+
+    iex> JsonLogic.apply(%{"max" => [1,2,3]})
+    3
+
+    iex> JsonLogic.apply(%{"min" => [1,2,3]})
+    1
+
+    iex> JsonLogic.apply(%{"<" => [0, 1]})
+    true
+
+    iex> JsonLogic.apply(%{"<" => [1, 0]})
+    false
+
+    iex> JsonLogic.apply(%{"<" => [0, 1, 2]})
+    true
+
+    iex> JsonLogic.apply(%{"<" => [0, 2, 1]})
+    false
+
+    iex> JsonLogic.apply(%{">" => [1, 0]})
+    true
+
+    iex> JsonLogic.apply(%{">" => [0, 1]})
+    false
+
+    iex> JsonLogic.apply(%{">" => [2, 1, 0]})
+    true
+
+    iex> JsonLogic.apply(%{">" => [2, 0, 1]})
+    false
+
+    iex> JsonLogic.apply(%{"<=" => [1, 1]})
+    true
+
+    iex> JsonLogic.apply(%{"<=" => [1, 0]})
+    false
+
+    iex> JsonLogic.apply(%{"<=" => [1, 1, 2]})
+    true
+
+    iex> JsonLogic.apply(%{"<=" => [1, 0, 2]})
+    false
+
+    iex> JsonLogic.apply(%{">=" => [1, 1]})
+    true
+
+    iex> JsonLogic.apply(%{">=" => [0, 1]})
+    false
+
+    iex> JsonLogic.apply(%{">=" => [1, 1, 0]})
+    true
+
+    iex> JsonLogic.apply(%{">=" => [0, 1, 2]})
+    false
+
+    iex> JsonLogic.apply(%{"+" => [1,2,3]})
+    6
+
+    iex> JsonLogic.apply(%{"+" => [2]})
+    2
+
+    iex> JsonLogic.apply(%{"-" => [7,4]})
+    3
+
+    iex> JsonLogic.apply(%{"-" => [2]})
+    -2
+
+    iex> JsonLogic.apply(%{"*" => [2,3,4]})
+    24
+
+    iex> JsonLogic.apply(%{"/" => [5,2]})
+    2.5
+
+    iex> JsonLogic.apply(%{"%" => [7, 3]})
+    1
+
+    iex> JsonLogic.apply(%{"in" => ["sub", "substring"]})
+    true
+
+    iex> JsonLogic.apply(%{"in" => ["na", "substring"]})
+    false
+
+    iex> JsonLogic.apply(%{"cat" => ["a", "b", "c"]})
+    "abc"
+
+    iex> JsonLogic.apply(%{"log" => "string"})
+    "string"
   """
 
   @operations %{
@@ -83,6 +173,20 @@ defmodule JsonLogic do
     "!" => :operation_not,
     "or" => :operation_or,
     "and" => :operation_and,
+    "<" => :operation_less_than,
+    ">" => :operation_greater_than,
+    "<=" => :operation_less_than_or_equal,
+    ">=" => :operation_greater_than_or_equal,
+    "max" => :operation_max,
+    "min" => :operation_min,
+    "+" => :operation_addition,
+    "-" => :operation_subtraction,
+    "*" => :operation_multiplication,
+    "/" => :operation_division,
+    "%" => :operation_remainder,
+    "in" => :operation_in,
+    "cat" => :operation_cat,
+    "log" => :operation_log,
   }
 
   @doc """
@@ -126,6 +230,11 @@ defmodule JsonLogic do
   end
 
   @doc false
+  def operation_var([path, default_key], data) do
+    operation_var(path, data) || JsonLogic.apply(default_key, data)
+  end
+
+  @doc false
   def operation_var(index, data) when is_number(index) do
     Enum.at(data, index)
   end
@@ -159,6 +268,7 @@ defmodule JsonLogic do
   end
 
   @doc false
+  # TODO: may need refactoring
   def operation_if(statements, data) do
     case statements do
       [last] -> JsonLogic.apply(last, data)
@@ -186,4 +296,115 @@ defmodule JsonLogic do
     end
   end
 
+  @doc false
+  def operation_max(list, data) do
+    list |> Enum.map(fn(x) -> JsonLogic.apply(x, data) end) |> Enum.max
+  end
+
+  @doc false
+  def operation_min(list, data) do
+    list |> Enum.map(fn(x) -> JsonLogic.apply(x, data) end) |> Enum.min
+  end
+
+  @doc false
+  def operation_less_than([left, right], data) do
+    JsonLogic.apply(left, data) < JsonLogic.apply(right, data)
+  end
+
+  @doc false
+  def operation_less_than([left, middle, right | _], data) do
+    JsonLogic.apply(left, data) < JsonLogic.apply(middle, data) &&
+    JsonLogic.apply(middle, data) < JsonLogic.apply(right, data)
+  end
+
+  @doc false
+  def operation_greater_than([left, right], data) do
+    JsonLogic.apply(left, data) > JsonLogic.apply(right, data)
+  end
+
+  @doc false
+  def operation_greater_than([left, middle, right | _], data) do
+    JsonLogic.apply(left, data) > JsonLogic.apply(middle, data) &&
+    JsonLogic.apply(middle, data) > JsonLogic.apply(right, data)
+  end
+
+  @doc false
+  def operation_less_than_or_equal([left, right], data) do
+    JsonLogic.apply(left, data) <= JsonLogic.apply(right, data)
+  end
+
+  @doc false
+  def operation_less_than_or_equal([left, middle, right | _], data) do
+    JsonLogic.apply(left, data) <= JsonLogic.apply(middle, data) &&
+    JsonLogic.apply(middle, data) <= JsonLogic.apply(right, data)
+  end
+
+  @doc false
+  def operation_greater_than_or_equal([left, right], data) do
+    JsonLogic.apply(left, data) >= JsonLogic.apply(right, data)
+  end
+
+  @doc false
+  def operation_greater_than_or_equal([left, middle, right | _], data) do
+    JsonLogic.apply(left, data) >= JsonLogic.apply(middle, data) &&
+    JsonLogic.apply(middle, data) >= JsonLogic.apply(right, data)
+  end
+
+  @doc false
+  def operation_addition(numbers, data) do
+    [first | rest] = numbers
+    reduce_from = JsonLogic.apply(first, data)
+    reduce_on = Enum.map(rest, fn(n) -> JsonLogic.apply(n, data) end )
+    {_, result} = Enum.map_reduce(reduce_on, reduce_from, fn(n, total) -> {n, total + n} end)
+    result
+  end
+
+  @doc false
+  def operation_subtraction([first, last], data) do
+    reduce_on = [JsonLogic.apply(last, data)]
+    reduce_from = JsonLogic.apply(first, data)
+    {_, result} = Enum.map_reduce(reduce_on, reduce_from, fn(n, total) -> {n, total - n} end)
+    result
+  end
+
+  @doc false
+  def operation_subtraction([first], data) do
+    -JsonLogic.apply(first, data)
+  end
+
+  @doc false
+  def operation_multiplication([first | rest], data) do
+    reduce_on = Enum.map(rest, fn(n) -> JsonLogic.apply(n, data) end )
+    reduce_from = JsonLogic.apply(first, data)
+    {_, result} = Enum.map_reduce(reduce_on, reduce_from, fn(n, total) -> {n, total * n} end)
+    result
+  end
+
+  @doc false
+  def operation_division([first, last], data) do
+    reduce_on = [JsonLogic.apply(last, data)]
+    reduce_from = JsonLogic.apply(first, data)
+    {_, result} = Enum.map_reduce(reduce_on, reduce_from, fn(n, total) -> {n, total / n} end)
+    result
+  end
+
+  @doc false
+  def operation_remainder([first, last], data) do
+    Kernel.rem(JsonLogic.apply(first, data), JsonLogic.apply(last, data))
+  end
+
+  @doc false
+  def operation_in([substring, string], data) do
+    String.contains?(JsonLogic.apply(string, data), JsonLogic.apply(substring, data))
+  end
+
+  @doc false
+  def operation_cat(strings, data) do
+    strings |> Enum.map(fn(s) -> JsonLogic.apply(s, data) end) |> Enum.join
+  end
+
+  @doc false
+  def operation_log(logic, data) do
+    JsonLogic.apply(logic, data)
+  end
 end

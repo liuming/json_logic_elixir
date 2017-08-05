@@ -81,4 +81,55 @@ defmodule JsonLogicTest do
       assert JsonLogic.apply(%{"if" => [false, "unexpected", false, "unexpected", %{"var" => "key"} ]}, %{"key" => "default"}) == "default"
     end
   end
+
+  describe "max" do
+    test "returns max from vars" do
+      logic = [%{"var" => "three"}, %{"var" => "one"}, %{"var" => "two"}]
+      data = %{"one" => 1, "two" => 2, "three" => 3}
+      assert JsonLogic.apply(%{"max" => logic}, data) == 3
+    end
+  end
+
+
+  describe "min" do
+    test "returns min from vars" do
+      logic = [%{"var" => "three"}, %{"var" => "one"}, %{"var" => "two"}]
+      data = %{"one" => 1, "two" => 2, "three" => 3}
+      assert JsonLogic.apply(%{"min" => logic}, data) == 1
+    end
+  end
+
+  describe "+" do
+    test "returns added result of vars" do
+      assert JsonLogic.apply(%{"+" => [%{"var" => "left"}, %{"var" => "right"}]}, %{"left" => 5, "right" => 2}) == 7
+    end
+  end
+
+  describe "-" do
+    test "returns subtraced result of vars" do
+      assert JsonLogic.apply(%{"-" => [%{"var" => "left"}, %{"var" => "right"}]}, %{"left" => 5, "right" => 2}) == 3
+    end
+
+    test "returns negative of a var" do
+      assert JsonLogic.apply(%{"-" => [%{"var" => "key"}]}, %{"key" => 2}) == -2
+    end
+  end
+
+  describe "*" do
+    test "returns multiplied result of vars" do
+      assert JsonLogic.apply(%{"*" => [%{"var" => "left"}, %{"var" => "right"}]}, %{"left" => 5, "right" => 2}) == 10
+    end
+  end
+
+  describe "/" do
+    test "returns multiplied result of vars" do
+      assert JsonLogic.apply(%{"/" => [%{"var" => "left"}, %{"var" => "right"}]}, %{"left" => 5, "right" => 2}) == 2.5
+    end
+  end
+
+  describe "in" do
+    test "returns true from vars" do
+      assert JsonLogic.apply(%{"in" => [%{"var" => "find"}, %{"var" => "from"}]}, %{"find" => "sub", "from" => "substring"}) == true
+    end
+  end
 end

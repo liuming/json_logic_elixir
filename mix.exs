@@ -4,12 +4,19 @@ defmodule JsonLogic.Mixfile do
   def project do
     [
       app: :json_logic,
+      package: %{
+        description: "Elixir implementation of JsonLogic",
+        links: %{github: "https://github.com/liuming/json_logic_elixir"},
+        maintainers: [ "Ming Liu" ],
+        licenses: ["MIT"],
+      },
       version: "0.1.0",
       elixir: "~> 1.5",
       start_permanent: Mix.env == :prod,
       deps: deps()
     ]
   end
+
 
   # Run "mix help compile.app" to learn about applications.
   def application do

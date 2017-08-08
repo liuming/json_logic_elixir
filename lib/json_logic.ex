@@ -1,6 +1,6 @@
 defmodule JsonLogic do
   @moduledoc """
-  An Elixir implementation of JsonLogic.
+  An Elixir implementation of [JsonLogic](http://jsonlogic.com/).
 
   ## Examples
       iex> JsonLogic.apply(nil)
@@ -190,8 +190,11 @@ defmodule JsonLogic do
   }
 
   @doc """
-  apply JsonLogic
+  Apply JsonLogic.
+  Accepts logic and data arguments as Map
+  Returns resolved result as Map
   """
+  @spec apply(Map.t, Map.t) :: Map.t
   def apply(logic, data \\ nil)
 
   # operations selector branch of apply

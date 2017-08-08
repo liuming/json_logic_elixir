@@ -354,7 +354,7 @@ defmodule JsonLogic do
   def operation_addition(numbers, data) do
     [first | rest] = numbers
     reduce_from = JsonLogic.apply(first, data)
-    reduce_on = Enum.map(rest, fn(n) -> JsonLogic.apply(n, data) end )
+    reduce_on = Enum.map(rest, fn(n) -> JsonLogic.apply(n, data) end)
     {_, result} = Enum.map_reduce(reduce_on, reduce_from, fn(n, total) -> {n, total + n} end)
     result
   end
@@ -374,7 +374,7 @@ defmodule JsonLogic do
 
   @doc false
   def operation_multiplication([first | rest], data) do
-    reduce_on = Enum.map(rest, fn(n) -> JsonLogic.apply(n, data) end )
+    reduce_on = Enum.map(rest, fn(n) -> JsonLogic.apply(n, data) end)
     reduce_from = JsonLogic.apply(first, data)
     {_, result} = Enum.map_reduce(reduce_on, reduce_from, fn(n, total) -> {n, total * n} end)
     result

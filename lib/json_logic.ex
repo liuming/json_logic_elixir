@@ -3,164 +3,164 @@ defmodule JsonLogic do
   Documentation for JsonLogic.
 
   ## Examples
-    iex> JsonLogic.apply(nil)
-    nil
+      iex> JsonLogic.apply(nil)
+      nil
 
-    iex> JsonLogic.apply(%{})
-    %{}
+      iex> JsonLogic.apply(%{})
+      %{}
 
-    iex> JsonLogic.apply(%{"var" => "key"}, %{"key" => "value"})
-    "value"
+      iex> JsonLogic.apply(%{"var" => "key"}, %{"key" => "value"})
+      "value"
 
-    iex> JsonLogic.apply(%{"var" => "nested.key"}, %{"nested" => %{"key" => "value"}})
-    "value"
+      iex> JsonLogic.apply(%{"var" => "nested.key"}, %{"nested" => %{"key" => "value"}})
+      "value"
 
-    iex> JsonLogic.apply(%{"var" => ["none", "default"]}, %{"key" => "value"})
-    "default"
+      iex> JsonLogic.apply(%{"var" => ["none", "default"]}, %{"key" => "value"})
+      "default"
 
-    iex> JsonLogic.apply(%{"var" => 0}, ~w{a b})
-    "a"
+      iex> JsonLogic.apply(%{"var" => 0}, ~w{a b})
+      "a"
 
-    iex> JsonLogic.apply(%{"==" => [1, 1]})
-    true
+      iex> JsonLogic.apply(%{"==" => [1, 1]})
+      true
 
-    iex> JsonLogic.apply(%{"==" => [0, 1]})
-    false
+      iex> JsonLogic.apply(%{"==" => [0, 1]})
+      false
 
-    iex> JsonLogic.apply(%{"!=" => [1, 1]})
-    false
+      iex> JsonLogic.apply(%{"!=" => [1, 1]})
+      false
 
-    iex> JsonLogic.apply(%{"!=" => [0, 1]})
-    true
+      iex> JsonLogic.apply(%{"!=" => [0, 1]})
+      true
 
-    iex> JsonLogic.apply(%{"===" => [1, 1]})
-    true
+      iex> JsonLogic.apply(%{"===" => [1, 1]})
+      true
 
-    iex> JsonLogic.apply(%{"===" => [1, 1.0]})
-    false
+      iex> JsonLogic.apply(%{"===" => [1, 1.0]})
+      false
 
-    iex> JsonLogic.apply(%{"===" => [1, %{"var" => "key"}]}, %{"key" => 1})
-    true
+      iex> JsonLogic.apply(%{"===" => [1, %{"var" => "key"}]}, %{"key" => 1})
+      true
 
-    iex> JsonLogic.apply(%{"!==" => [1, 1.0]})
-    true
+      iex> JsonLogic.apply(%{"!==" => [1, 1.0]})
+      true
 
-    iex> JsonLogic.apply(%{"!==" => [1, 1]})
-    false
+      iex> JsonLogic.apply(%{"!==" => [1, 1]})
+      false
 
-    iex> JsonLogic.apply(%{"!" => true})
-    false
+      iex> JsonLogic.apply(%{"!" => true})
+      false
 
-    iex> JsonLogic.apply(%{"!" => false})
-    true
+      iex> JsonLogic.apply(%{"!" => false})
+      true
 
-    iex> JsonLogic.apply(%{"if" => [true, "yes", "no" ]})
-    "yes"
+      iex> JsonLogic.apply(%{"if" => [true, "yes", "no" ]})
+      "yes"
 
-    iex> JsonLogic.apply(%{"if" => [false, "yes", "no" ]})
-    "no"
+      iex> JsonLogic.apply(%{"if" => [false, "yes", "no" ]})
+      "no"
 
-    iex> JsonLogic.apply(%{"if" => [false, "unexpected", false, "unexpected", "default" ]})
-    "default"
+      iex> JsonLogic.apply(%{"if" => [false, "unexpected", false, "unexpected", "default" ]})
+      "default"
 
-    iex> JsonLogic.apply(%{"or" => [false, nil, "truthy"]})
-    "truthy"
+      iex> JsonLogic.apply(%{"or" => [false, nil, "truthy"]})
+      "truthy"
 
-    iex> JsonLogic.apply(%{"or" => ["first", "truthy"]})
-    "first"
+      iex> JsonLogic.apply(%{"or" => ["first", "truthy"]})
+      "first"
 
-    iex> JsonLogic.apply(%{"and" => [false, "falsy"]})
-    false
+      iex> JsonLogic.apply(%{"and" => [false, "falsy"]})
+      false
 
-    iex> JsonLogic.apply(%{"and" => [true, 1, "truthy"]})
-    "truthy"
+      iex> JsonLogic.apply(%{"and" => [true, 1, "truthy"]})
+      "truthy"
 
-    iex> JsonLogic.apply(%{"max" => [1,2,3]})
-    3
+      iex> JsonLogic.apply(%{"max" => [1,2,3]})
+      3
 
-    iex> JsonLogic.apply(%{"min" => [1,2,3]})
-    1
+      iex> JsonLogic.apply(%{"min" => [1,2,3]})
+      1
 
-    iex> JsonLogic.apply(%{"<" => [0, 1]})
-    true
+      iex> JsonLogic.apply(%{"<" => [0, 1]})
+      true
 
-    iex> JsonLogic.apply(%{"<" => [1, 0]})
-    false
+      iex> JsonLogic.apply(%{"<" => [1, 0]})
+      false
 
-    iex> JsonLogic.apply(%{"<" => [0, 1, 2]})
-    true
+      iex> JsonLogic.apply(%{"<" => [0, 1, 2]})
+      true
 
-    iex> JsonLogic.apply(%{"<" => [0, 2, 1]})
-    false
+      iex> JsonLogic.apply(%{"<" => [0, 2, 1]})
+      false
 
-    iex> JsonLogic.apply(%{">" => [1, 0]})
-    true
+      iex> JsonLogic.apply(%{">" => [1, 0]})
+      true
 
-    iex> JsonLogic.apply(%{">" => [0, 1]})
-    false
+      iex> JsonLogic.apply(%{">" => [0, 1]})
+      false
 
-    iex> JsonLogic.apply(%{">" => [2, 1, 0]})
-    true
+      iex> JsonLogic.apply(%{">" => [2, 1, 0]})
+      true
 
-    iex> JsonLogic.apply(%{">" => [2, 0, 1]})
-    false
+      iex> JsonLogic.apply(%{">" => [2, 0, 1]})
+      false
 
-    iex> JsonLogic.apply(%{"<=" => [1, 1]})
-    true
+      iex> JsonLogic.apply(%{"<=" => [1, 1]})
+      true
 
-    iex> JsonLogic.apply(%{"<=" => [1, 0]})
-    false
+      iex> JsonLogic.apply(%{"<=" => [1, 0]})
+      false
 
-    iex> JsonLogic.apply(%{"<=" => [1, 1, 2]})
-    true
+      iex> JsonLogic.apply(%{"<=" => [1, 1, 2]})
+      true
 
-    iex> JsonLogic.apply(%{"<=" => [1, 0, 2]})
-    false
+      iex> JsonLogic.apply(%{"<=" => [1, 0, 2]})
+      false
 
-    iex> JsonLogic.apply(%{">=" => [1, 1]})
-    true
+      iex> JsonLogic.apply(%{">=" => [1, 1]})
+      true
 
-    iex> JsonLogic.apply(%{">=" => [0, 1]})
-    false
+      iex> JsonLogic.apply(%{">=" => [0, 1]})
+      false
 
-    iex> JsonLogic.apply(%{">=" => [1, 1, 0]})
-    true
+      iex> JsonLogic.apply(%{">=" => [1, 1, 0]})
+      true
 
-    iex> JsonLogic.apply(%{">=" => [0, 1, 2]})
-    false
+      iex> JsonLogic.apply(%{">=" => [0, 1, 2]})
+      false
 
-    iex> JsonLogic.apply(%{"+" => [1,2,3]})
-    6
+      iex> JsonLogic.apply(%{"+" => [1,2,3]})
+      6
 
-    iex> JsonLogic.apply(%{"+" => [2]})
-    2
+      iex> JsonLogic.apply(%{"+" => [2]})
+      2
 
-    iex> JsonLogic.apply(%{"-" => [7,4]})
-    3
+      iex> JsonLogic.apply(%{"-" => [7,4]})
+      3
 
-    iex> JsonLogic.apply(%{"-" => [2]})
-    -2
+      iex> JsonLogic.apply(%{"-" => [2]})
+      -2
 
-    iex> JsonLogic.apply(%{"*" => [2,3,4]})
-    24
+      iex> JsonLogic.apply(%{"*" => [2,3,4]})
+      24
 
-    iex> JsonLogic.apply(%{"/" => [5,2]})
-    2.5
+      iex> JsonLogic.apply(%{"/" => [5,2]})
+      2.5
 
-    iex> JsonLogic.apply(%{"%" => [7, 3]})
-    1
+      iex> JsonLogic.apply(%{"%" => [7, 3]})
+      1
 
-    iex> JsonLogic.apply(%{"in" => ["sub", "substring"]})
-    true
+      iex> JsonLogic.apply(%{"in" => ["sub", "substring"]})
+      true
 
-    iex> JsonLogic.apply(%{"in" => ["na", "substring"]})
-    false
+      iex> JsonLogic.apply(%{"in" => ["na", "substring"]})
+      false
 
-    iex> JsonLogic.apply(%{"cat" => ["a", "b", "c"]})
-    "abc"
+      iex> JsonLogic.apply(%{"cat" => ["a", "b", "c"]})
+      "abc"
 
-    iex> JsonLogic.apply(%{"log" => "string"})
-    "string"
+      iex> JsonLogic.apply(%{"log" => "string"})
+      "string"
   """
 
   @operations %{

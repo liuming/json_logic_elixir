@@ -1,6 +1,6 @@
 defmodule JsonLogic do
   @moduledoc """
-  Documentation for JsonLogic.
+  An Elixir implementation of JsonLogic.
 
   ## Examples
       iex> JsonLogic.apply(nil)
@@ -190,24 +190,18 @@ defmodule JsonLogic do
   }
 
   @doc """
-  ## apply JsonLogic
-
-  This is the entry point
+  apply JsonLogic
   """
   def apply(logic, data \\ nil)
 
-  @doc """
-  ## operations selector branch of apply
-  """
+  # operations selector branch of apply
   def apply(logic, data) when is_map(logic) and logic != %{} do
     operation_name = logic |> Map.keys |> List.first
     values = logic |> Map.values |> List.first
     Kernel.apply(__MODULE__, @operations[operation_name], [values, data])
   end
 
-  @doc """
-  ## conclusive branch of apply
-  """
+  # conclusive branch of apply
   def apply(logic, _) do
     logic
   end

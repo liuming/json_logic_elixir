@@ -397,13 +397,19 @@ defmodule JsonLogic do
   end
 
   @doc false
-  def operation_in([substring, string], data) when not is_list(substring) and not is_list(string) do
-    String.contains?(JsonLogic.apply(string, data), JsonLogic.apply(substring, data))
+  def operation_in([member, list], data) when is_list(list) do
+    members = list |> Enum.map(fn(m) -> JsonLogic.apply(m, data) end)
+    Enum.member?(members, JsonLogic.apply(member, data))
   end
 
   @doc false
-  def operation_in([member, list], data) when is_list(list) do
-    Enum.member?(JsonLogic.apply(list, data), JsonLogic.apply(member, data))
+  def operation_in([substring, string], data) when is_binary(string) do
+    String.contains?(string, JsonLogic.apply(substring, data))
+  end
+
+  @doc false
+  def operation_in([find, from], data) do
+    operation_in([JsonLogic.apply(find, data), JsonLogic.apply(from, data)], data)
   end
 
   @doc false

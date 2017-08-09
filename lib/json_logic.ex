@@ -156,6 +156,12 @@ defmodule JsonLogic do
       iex> JsonLogic.apply(%{"in" => ["na", "substring"]})
       false
 
+      iex> JsonLogic.apply(%{"in" => ["a", ["a", "b", "c"]]})
+      true
+
+      iex> JsonLogic.apply(%{"in" => ["z", ["a", "b", "c"]]})
+      false
+
       iex> JsonLogic.apply(%{"cat" => ["a", "b", "c"]})
       "abc"
 
@@ -391,8 +397,13 @@ defmodule JsonLogic do
   end
 
   @doc false
-  def operation_in([substring, string], data) do
+  def operation_in([substring, string], data) when not is_list(substring) and not is_list(string) do
     String.contains?(JsonLogic.apply(string, data), JsonLogic.apply(substring, data))
+  end
+
+  @doc false
+  def operation_in([member, list], data) when is_list(list) do
+    Enum.member?(JsonLogic.apply(list, data), JsonLogic.apply(member, data))
   end
 
   @doc false

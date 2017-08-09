@@ -408,6 +408,11 @@ defmodule JsonLogic do
   end
 
   @doc false
+  def operation_in([_, from], _) when is_nil(from) do
+    false
+  end
+
+  @doc false
   def operation_in([find, from], data) do
     operation_in([JsonLogic.apply(find, data), JsonLogic.apply(from, data)], data)
   end

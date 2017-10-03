@@ -153,6 +153,10 @@ defmodule JsonLogic do
       iex> JsonLogic.apply(%{"map" => [ %{"var" => "integers"}, %{"*" => [%{"var" => ""}, 2]} ]}, %{"integers" => [1,2,3,4,5]})
       [2,4,6,8,10]
 
+      iex> JsonLogic.apply(%{"filter" => [ %{"var" => "integers"}, %{">" => [%{"var" => ""}, 2]} ]}, %{"integers" => [1,2,3,4,5]})
+      [3,4,5]
+
+
       iex> JsonLogic.apply(%{"in" => ["sub", "substring"]})
       true
 
@@ -194,6 +198,7 @@ defmodule JsonLogic do
     "/" => :operation_division,
     "%" => :operation_remainder,
     "map" => :operation_map,
+    "filter" => :operation_filter,
     "in" => :operation_in,
     "cat" => :operation_cat,
     "log" => :operation_log,
@@ -409,6 +414,12 @@ defmodule JsonLogic do
   def operation_map([list, map_action], data) do
     JsonLogic.apply(list, data)
     |> Enum.map(fn(item) -> JsonLogic.apply(map_action, [JsonLogic.apply(item)]) end)
+  end
+
+  @doc false
+  def operation_filter([list, filter_action], data) do
+    JsonLogic.apply(list, data)
+    |> Enum.filter(fn(item) -> JsonLogic.apply(filter_action, [JsonLogic.apply(item)]) end)
   end
 
   @doc false

@@ -159,6 +159,24 @@ defmodule JsonLogic do
       iex> JsonLogic.apply(%{"reduce" => [ [1,2,3,4,5], %{"+" => [%{"var" => "current"}, %{"var" => "accumulator"}]} ]})
       15
 
+      iex> JsonLogic.apply(%{"all" => [ [1,2,3], %{">" => [ %{"var" => ""}, 0 ]} ]})
+      true
+
+      iex> JsonLogic.apply(%{"all" => [ [-1,2,3], %{">" => [ %{"var" => ""}, 0 ]} ]})
+      false
+
+      iex> JsonLogic.apply(%{"none" => [ [1,2,3], %{"<" => [ %{"var" => ""}, 0 ]} ]})
+      true
+
+      iex> JsonLogic.apply(%{"none" => [ [-1,2,3], %{"<" => [ %{"var" => ""}, 0 ]} ]})
+      false
+
+      iex> JsonLogic.apply(%{"some" => [ [-1,2,3], %{"<" => [ %{"var" => ""}, 0 ]} ]})
+      true
+
+      iex> JsonLogic.apply(%{"some" => [ [1,2,3], %{"<" => [ %{"var" => ""}, 0 ]} ]})
+      false
+
       iex> JsonLogic.apply(%{"in" => ["sub", "substring"]})
       true
 
@@ -202,6 +220,9 @@ defmodule JsonLogic do
     "map" => :operation_map,
     "filter" => :operation_filter,
     "reduce" => :operation_reduce,
+    "all" => :operation_all,
+    "none" => :operation_none,
+    "some" => :operation_some,
     "in" => :operation_in,
     "cat" => :operation_cat,
     "log" => :operation_log,
@@ -416,21 +437,39 @@ defmodule JsonLogic do
   @doc false
   def operation_map([list, map_action], data) do
     JsonLogic.apply(list, data)
-    |> Enum.map(fn(item) -> JsonLogic.apply(map_action, [JsonLogic.apply(item)]) end)
+    |> Enum.map(fn(item) -> JsonLogic.apply(map_action, [item]) end)
   end
 
   @doc false
   def operation_filter([list, filter_action], data) do
     JsonLogic.apply(list, data)
-    |> Enum.filter(fn(item) -> JsonLogic.apply(filter_action, [JsonLogic.apply(item)]) end)
+    |> Enum.filter(fn(item) -> JsonLogic.apply(filter_action, [item]) end)
   end
 
   @doc false
   def operation_reduce([list, reduce_action], data) do
     [first | others] = JsonLogic.apply(list, data)
     others |> Enum.reduce(first, fn(item, accumulator) ->
-        JsonLogic.apply(reduce_action, %{"current" => JsonLogic.apply(item), "accumulator" => accumulator})
+        JsonLogic.apply(reduce_action, %{"current" => item, "accumulator" => accumulator})
       end)
+  end
+
+  @doc false
+  def operation_all([list, test], data) do
+    JsonLogic.apply(list, data)
+    |> Enum.all?(fn(item) -> JsonLogic.apply(test, [item]) end)
+  end
+
+  @doc false
+  def operation_none([list, test], data) do
+    JsonLogic.apply(list, data)
+    |> Enum.all?(fn(item) -> Kernel.if(JsonLogic.apply(test, [item]), do: false, else: true) end)
+  end
+
+  @doc false
+  def operation_some([list, test], data) do
+    JsonLogic.apply(list, data)
+    |> Enum.any?(fn(item) -> JsonLogic.apply(test, [item]) end)
   end
 
   @doc false

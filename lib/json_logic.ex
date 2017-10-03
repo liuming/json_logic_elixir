@@ -150,6 +150,9 @@ defmodule JsonLogic do
       iex> JsonLogic.apply(%{"%" => [7, 3]})
       1
 
+      iex> JsonLogic.apply(%{"map" => [ %{"var" => "integers"}, %{"*" => [%{"var" => ""}, 2]} ]}, %{"integers" => [1,2,3,4,5]})
+      [2,4,6,8,10]
+
       iex> JsonLogic.apply(%{"in" => ["sub", "substring"]})
       true
 
@@ -190,6 +193,7 @@ defmodule JsonLogic do
     "*" => :operation_multiplication,
     "/" => :operation_division,
     "%" => :operation_remainder,
+    "map" => :operation_map,
     "in" => :operation_in,
     "cat" => :operation_cat,
     "log" => :operation_log,
@@ -213,6 +217,11 @@ defmodule JsonLogic do
   # conclusive branch of apply
   def apply(logic, _) do
     logic
+  end
+
+  @doc false
+  def operation_var("", data) do
+    Enum.at(data, 0)
   end
 
   @doc false
@@ -394,6 +403,12 @@ defmodule JsonLogic do
   @doc false
   def operation_remainder([first, last], data) do
     Kernel.rem(JsonLogic.apply(first, data), JsonLogic.apply(last, data))
+  end
+
+  @doc false
+  def operation_map([list, map_action], data) do
+    JsonLogic.apply(list, data)
+    |> Enum.map(fn(item) -> JsonLogic.apply(map_action, [JsonLogic.apply(item)]) end)
   end
 
   @doc false

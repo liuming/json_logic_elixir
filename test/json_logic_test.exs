@@ -126,6 +126,24 @@ defmodule JsonLogicTest do
     end
   end
 
+  describe "map" do
+    test "returns mapped result" do
+      assert JsonLogic.apply(%{"map" => [ %{"var" => "integers"}, %{"*" => [%{"var" => ""}, 2]} ]}, %{"integers" => [1,2,3,4,5]}) == [2,4,6,8,10]
+    end
+  end
+
+  describe "filter" do
+    test "returns filtered result" do
+      assert JsonLogic.apply(%{"filter" => [ %{"var" => "integers"}, %{">" => [%{"var" => ""}, 2]} ]}, %{"integers" => [1,2,3,4,5]}) == [3,4,5]
+    end
+  end
+
+  describe "reduce" do
+    test "returns reduced result" do
+      assert JsonLogic.apply(%{"reduce" => [ %{"var" => "integers"}, %{"+" => [%{"var" => "current"}, %{"var" => "accumulator"}]} ]}, %{"integers" => [1,2,3]}) == 6
+    end
+  end
+
   describe "in" do
     test "returns true from vars" do
       assert JsonLogic.apply(%{"in" => [%{"var" => "find"}, %{"var" => "from"}]}, %{"find" => "sub", "from" => "substring"}) == true

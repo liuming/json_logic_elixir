@@ -150,13 +150,13 @@ defmodule JsonLogic do
       iex> JsonLogic.apply(%{"%" => [7, 3]})
       1
 
-      iex> JsonLogic.apply(%{"map" => [ %{"var" => "integers"}, %{"*" => [%{"var" => ""}, 2]} ]}, %{"integers" => [1,2,3,4,5]})
+      iex> JsonLogic.apply(%{"map" => [ [1,2,3,4,5], %{"*" => [%{"var" => ""}, 2]} ]})
       [2,4,6,8,10]
 
-      iex> JsonLogic.apply(%{"filter" => [ %{"var" => "integers"}, %{">" => [%{"var" => ""}, 2]} ]}, %{"integers" => [1,2,3,4,5]})
+      iex> JsonLogic.apply(%{"filter" => [ [1,2,3,4,5], %{">" => [%{"var" => ""}, 2]} ]})
       [3,4,5]
 
-      iex> JsonLogic.apply(%{"reduce" => [ %{"var" => "integers"}, %{"+" => [%{"var" => "current"}, %{"var" => "accumulator"}]} ]}, %{"integers" => [1,2,3,4,5]})
+      iex> JsonLogic.apply(%{"reduce" => [ [1,2,3,4,5], %{"+" => [%{"var" => "current"}, %{"var" => "accumulator"}]} ]})
       15
 
       iex> JsonLogic.apply(%{"in" => ["sub", "substring"]})

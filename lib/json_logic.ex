@@ -156,6 +156,8 @@ defmodule JsonLogic do
       iex> JsonLogic.apply(%{"filter" => [ %{"var" => "integers"}, %{">" => [%{"var" => ""}, 2]} ]}, %{"integers" => [1,2,3,4,5]})
       [3,4,5]
 
+      iex> JsonLogic.apply(%{"reduce" => [ %{"var" => "integers"}, %{"+" => [%{"var" => "current"}, %{"var" => "accumulator"}]} ]}, %{"integers" => [1,2,3,4,5]})
+      15
 
       iex> JsonLogic.apply(%{"in" => ["sub", "substring"]})
       true
@@ -199,6 +201,7 @@ defmodule JsonLogic do
     "%" => :operation_remainder,
     "map" => :operation_map,
     "filter" => :operation_filter,
+    "reduce" => :operation_reduce,
     "in" => :operation_in,
     "cat" => :operation_cat,
     "log" => :operation_log,
@@ -420,6 +423,14 @@ defmodule JsonLogic do
   def operation_filter([list, filter_action], data) do
     JsonLogic.apply(list, data)
     |> Enum.filter(fn(item) -> JsonLogic.apply(filter_action, [JsonLogic.apply(item)]) end)
+  end
+
+  @doc false
+  def operation_reduce([list, reduce_action], data) do
+    [first | others] = JsonLogic.apply(list, data)
+    others |> Enum.reduce(first, fn(item, accumulator) ->
+        JsonLogic.apply(reduce_action, %{"current" => JsonLogic.apply(item), "accumulator" => accumulator})
+      end)
   end
 
   @doc false

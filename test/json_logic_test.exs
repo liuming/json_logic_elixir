@@ -90,7 +90,6 @@ defmodule JsonLogicTest do
     end
   end
 
-
   describe "min" do
     test "returns min from vars" do
       logic = [%{"var" => "three"}, %{"var" => "one"}, %{"var" => "two"}]

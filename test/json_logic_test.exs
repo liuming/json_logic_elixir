@@ -161,5 +161,9 @@ defmodule JsonLogicTest do
     test "returns false from nil" do
       assert JsonLogic.apply(%{"in" => [%{"var" => "find"}, %{"var" => "from"}]}, %{"find" => "sub", "from" => nil}) == false
     end
+
+    test "returns false from var list" do
+      assert JsonLogic.apply(%{"in" => [%{"var" => "find"}, %{"var" => "from"}]}, %{"find" => "sub", "from" => ["A", "B"]}) == false
+    end
   end
 end

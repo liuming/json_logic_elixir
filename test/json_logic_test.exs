@@ -80,6 +80,10 @@ defmodule JsonLogicTest do
     test "returns var with multiple branches" do
       assert JsonLogic.apply(%{"if" => [false, "unexpected", false, "unexpected", %{"var" => "key"} ]}, %{"key" => "default"}) == "default"
     end
+
+    test "returns nil when else is not present" do
+      assert JsonLogic.apply(%{"if" => [false, "unexpected" ]}) == nil
+    end
   end
 
   describe "max" do

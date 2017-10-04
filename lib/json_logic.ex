@@ -310,14 +310,23 @@ defmodule JsonLogic do
   end
 
   @doc false
-  # TODO: may need refactoring
-  def operation_if(statements, data) do
-    case statements do
-      [last] -> JsonLogic.apply(last, data)
-      [condition, yes, no] -> if JsonLogic.apply(condition, data), do: JsonLogic.apply(yes, data), else: JsonLogic.apply(no, data)
-      [condition, yes | others] -> if JsonLogic.apply(condition, data), do: JsonLogic.apply(yes, data), else: operation_if(others, data)
-      others -> operation_if(others, data)
-    end
+  def operation_if([last], data) do
+    JsonLogic.apply(last, data)
+  end
+
+  @doc false
+  def operation_if([condition, yes], data) do
+    Kernel.if JsonLogic.apply(condition, data), do: JsonLogic.apply(yes, data), else: nil
+  end
+
+  @doc false
+  def operation_if([condition, yes, no], data) do
+    Kernel.if JsonLogic.apply(condition, data), do: JsonLogic.apply(yes, data), else: JsonLogic.apply(no, data)
+  end
+
+  @doc false
+  def operation_if([condition, yes | others], data) do
+    Kernel.if JsonLogic.apply(condition, data), do: JsonLogic.apply(yes, data), else: operation_if(others, data)
   end
 
   @doc false

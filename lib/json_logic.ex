@@ -250,10 +250,11 @@ defmodule JsonLogic do
 
   @doc false
   def operation_var("", data) do
-    Enum.at(data, 0)
+    data
   end
 
   @doc false
+  # TODO: may need refactoring
   def operation_var(path, data) when is_binary(path) do
     [variable_name | names] = path |> String.split(".")
 
@@ -437,13 +438,13 @@ defmodule JsonLogic do
   @doc false
   def operation_map([list, map_action], data) do
     JsonLogic.apply(list, data)
-    |> Enum.map(fn(item) -> JsonLogic.apply(map_action, [item]) end)
+    |> Enum.map(fn(item) -> JsonLogic.apply(map_action, item) end)
   end
 
   @doc false
   def operation_filter([list, filter_action], data) do
     JsonLogic.apply(list, data)
-    |> Enum.filter(fn(item) -> JsonLogic.apply(filter_action, [item]) end)
+    |> Enum.filter(fn(item) -> JsonLogic.apply(filter_action, item) end)
   end
 
   @doc false
@@ -457,19 +458,19 @@ defmodule JsonLogic do
   @doc false
   def operation_all([list, test], data) do
     JsonLogic.apply(list, data)
-    |> Enum.all?(fn(item) -> JsonLogic.apply(test, [item]) end)
+    |> Enum.all?(fn(item) -> JsonLogic.apply(test, item) end)
   end
 
   @doc false
   def operation_none([list, test], data) do
     JsonLogic.apply(list, data)
-    |> Enum.all?(fn(item) -> Kernel.if(JsonLogic.apply(test, [item]), do: false, else: true) end)
+    |> Enum.all?(fn(item) -> Kernel.if(JsonLogic.apply(test, item), do: false, else: true) end)
   end
 
   @doc false
   def operation_some([list, test], data) do
     JsonLogic.apply(list, data)
-    |> Enum.any?(fn(item) -> JsonLogic.apply(test, [item]) end)
+    |> Enum.any?(fn(item) -> JsonLogic.apply(test, item) end)
   end
 
   @doc false

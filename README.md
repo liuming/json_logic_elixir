@@ -1,6 +1,6 @@
 # JsonLogic
 
-JsonLogic implementation in Elixir
+[JsonLogic](http://jsonlogic.com/) implementation in Elixir
 
 ## Installation
 
@@ -14,7 +14,10 @@ def deps do
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/json_logic](https://hexdocs.pm/json_logic).
+```elixir
+iex> JsonLogic.apply(%{"log" => "value"})
+"value"
+```
+
+Detailed documentation can be found at [https://hexdocs.pm/json_logic](https://hexdocs.pm/json_logic).
 

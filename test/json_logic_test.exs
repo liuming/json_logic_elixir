@@ -149,7 +149,7 @@ defmodule JsonLogicTest do
 
   describe "reduce" do
     test "returns reduced integers" do
-      assert JsonLogic.apply(%{"reduce" => [ %{"var" => "integers"}, %{"+" => [%{"var" => "current"}, %{"var" => "accumulator"}]} ]}, %{"integers" => [1,2,3]}) == 6
+      assert JsonLogic.apply(%{"reduce" => [ %{"var" => "integers"}, %{"+" => [%{"var" => "current"}, %{"var" => "accumulator"}]}, 0]}, %{"integers" => [1,2,3]}) == 6
     end
   end
 

@@ -1,14 +1,26 @@
 defmodule SpecificationTest do
   use ExUnit.Case
 
+  defp json_library do
+    Application.get_env(:json_logic_elixir, :json_library, Poison)
+  end
+
+  defp encode_json(content, opts \\ []) do
+    json_library().encode(content, opts)
+  end
+
+  defp decode_json(content, opts \\ []) do
+    json_library().decode(content, opts)
+  end
+
   defp specification() do
     {:ok, content} = File.read("test/specification.json")
-    {:ok, specification} = Poison.decode(content)
+    {:ok, specification} = decode_json(content)
     specification
   end
 
   def dump_json(title, data) do
-    {:ok, content} = Poison.encode(data, pretty: true)
+    {:ok, content} = encode_json(data, pretty: true)
     json = String.replace(content, "\n", "\n\t", global: true)
     "#{title}:\n\t#{json}"
   end
@@ -48,6 +60,6 @@ defmodule SpecificationTest do
   end
 
   test "specification" do
-    assert_specification specification()
+    assert_specification(specification())
   end
 end

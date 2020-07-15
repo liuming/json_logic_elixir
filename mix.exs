@@ -7,17 +7,16 @@ defmodule JsonLogic.Mixfile do
       package: %{
         description: "Elixir implementation of JsonLogic",
         links: %{github: "https://github.com/liuming/json_logic_elixir"},
-        maintainers: [ "Ming Liu" ],
-        licenses: ["MIT"],
+        maintainers: ["Ming Liu"],
+        licenses: ["MIT"]
       },
       docs: [main: "JsonLogic", extras: ["README.md"]],
       version: "0.4.0",
       elixir: "~> 1.5",
-      start_permanent: Mix.env == :prod,
+      start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
   end
-
 
   # Run "mix help compile.app" to learn about applications.
   def application do
@@ -29,9 +28,10 @@ defmodule JsonLogic.Mixfile do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:poison, "~> 3.1"},
-      {:credo, "~> 0.8", only: [:dev, :test], runtime: false},
-      {:ex_doc, ">= 0.0.0", only: :dev},
+      {:jason, ">= 1.0.0", optional: true},
+      {:poison, ">= 3.1.0", optional: true},
+      {:credo, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.22", only: :dev, runtime: false}
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
     ]
   end

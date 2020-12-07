@@ -29,7 +29,7 @@ defmodule JsonLogic.Mixfile do
   defp deps do
     [
       {:jason, ">= 1.0.0", optional: true},
-      {:poison, ">= 3.1.0", optional: true},
+      {:poison, ">= 4.0.1", optional: true},
       {:credo, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.22", only: :dev, runtime: false}
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},

@@ -169,5 +169,15 @@ defmodule JsonLogicTest do
     test "returns false from var list" do
       assert JsonLogic.apply(%{"in" => [%{"var" => "find"}, %{"var" => "from"}]}, %{"find" => "sub", "from" => ["A", "B"]}) == false
     end
+
+    test "raises on non-enumerable list" do
+      rule = [%{"var" => "users.id"}, 1]
+
+      assert_raise ArgumentError,
+                   "Cannot apply `in` to non-enumerable: `#{inspect(rule)}`",
+                   fn ->
+                     JsonLogic.apply(%{"in" => rule}, %{})
+                   end
+    end
   end
 end

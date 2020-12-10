@@ -628,6 +628,10 @@ defmodule JsonLogic do
     false
   end
 
+  def operation_in([member, list], _) when not is_map(list) do
+    raise ArgumentError, "Cannot apply `in` to non-enumerable: `#{inspect([member, list])}`"
+  end
+
   @doc false
   def operation_in([find, from], data) do
     operation_in([JsonLogic.apply(find, data), JsonLogic.apply(from, data)], data)

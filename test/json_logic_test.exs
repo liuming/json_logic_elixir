@@ -218,4 +218,18 @@ defmodule JsonLogicTest do
              }) == false
     end
   end
+
+  describe "some" do
+    test "works for nil lists" do
+      assert JsonLogic.apply(%{"some" => [%{"var" => "list"}, true]}, %{}) == false
+      assert JsonLogic.apply(%{"some" => [%{"var" => "list"}, true]}, %{"list" => nil}) == false
+    end
+  end
+
+  describe "none" do
+    test "works for nil lists" do
+      assert JsonLogic.apply(%{"none" => [%{"var" => "list"}, true]}, %{}) == true
+      assert JsonLogic.apply(%{"none" => [%{"var" => "list"}, true]}, %{"list" => nil}) == true
+    end
+  end
 end

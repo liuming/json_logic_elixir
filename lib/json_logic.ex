@@ -198,8 +198,5 @@ defmodule JsonLogic do
       "string"
   """
 
-  use JsonLogic.Base,
-    operations: %{
-      "foo" => :bar
-    }
+  use JsonLogic.Base
 end

@@ -438,13 +438,12 @@ defmodule JsonLogic do
   @doc false
   def operation_less_than([left, right], data) do
     {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
-    op1 =
-      if is_nil(op1) do
-        0
+    if is_nil(op1) do
+        false
       else
-        op1
+        op1 < op2
       end
-    op1 < op2
+
   end
 
   @doc false
@@ -455,7 +454,12 @@ defmodule JsonLogic do
 
   @doc false
   def operation_greater_than([left, right], data) do
-    !operation_less_than_or_equal([left, right], data)
+    {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
+    if is_nil(op1) or is_nil(op2) do
+        false
+      else
+        op1 > op2
+      end
   end
 
   @doc false
@@ -467,13 +471,12 @@ defmodule JsonLogic do
   @doc false
   def operation_less_than_or_equal([left, right], data) do
     {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
-    op1 =
-      if is_nil(op1) or is_nil(op2) do
-        0
+    if is_nil(op1) or is_nil(op2) do
+        false
       else
-        op1
+        op1 <= op2
       end
-    op1 <= op2
+
   end
 
   @doc false

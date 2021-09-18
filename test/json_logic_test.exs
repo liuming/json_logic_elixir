@@ -172,12 +172,44 @@ defmodule JsonLogicTest do
   end
 
   describe "nil data" do
-    test "cannot compare numbers to nothing" do
+    test "cannot compare nil" do
       assert JsonLogic.apply(%{">" => [5, nil]}) == false
       assert JsonLogic.apply(%{">=" => [5, nil]}) == false
+      assert JsonLogic.apply(%{"<" => [nil, 2]}) == false
       assert JsonLogic.apply(%{">" => [%{"var" => "quantity"}, 25]}, %{"abc" => 1}) == false
-      # assert JsonLogic.apply(%{"<" => [%{"var" => "quantity"}, 25]}, %{"abc" => 1}) == false
-      # assert JsonLogic.apply(%{"<" => [nil, 2]}) == false // Should be false, cannot compare numbers to nothing
+      assert JsonLogic.apply(%{"<" => [%{"var" => "quantity"}, 25]}, %{"abc" => 1}) == false
+
+      rules = %{
+        "and" => [
+            %{">" => [%{"var" => "quantity"}, 25]},
+            %{">" => [%{"var" => "durations"}, 23]}
+        ]
+      }
+      data = %{"code" => "FUM", "occurence" => 15}
+      assert JsonLogic.apply(rules, data) == false
+
+      rules = %{
+        "or" => [
+          %{
+            "and" => [
+              %{">" => [%{"var" => "accessorial_service.occurence"}, 5]},
+              %{"==" => [%{"var" => "accessorial_service.code"}, "WAT"]}
+            ]
+          },
+          %{
+            "and" => [
+              %{">" => [%{"var" => "accessorial_service.occurence"}, 0]},
+              %{"==" => [%{"var" => "accessorial_service.code"}, "washing"]}
+            ]
+          }
+        ]
+      }
+      data = %{"accessorial_service" => %{"code" => "WAT", "occurence" => 15}}
+      assert JsonLogic.apply(rules, data) == true
+
+      data = %{"accessorial_service" => %{"code" => "FUM", "occurence" => 15}}
+      assert JsonLogic.apply(rules, data) == false
+
     end
   end
 

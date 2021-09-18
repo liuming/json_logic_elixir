@@ -170,4 +170,15 @@ defmodule JsonLogicTest do
       assert JsonLogic.apply(%{"in" => [%{"var" => "find"}, %{"var" => "from"}]}, %{"find" => "sub", "from" => ["A", "B"]}) == false
     end
   end
+
+  describe "nil data" do
+    test "cannot compare numbers to nothing" do
+      assert JsonLogic.apply(%{">" => [5, nil]}) == false
+      assert JsonLogic.apply(%{">=" => [5, nil]}) == false
+      assert JsonLogic.apply(%{">" => [%{"var" => "quantity"}, 25]}, %{"abc" => 1}) == false
+      # assert JsonLogic.apply(%{"<" => [%{"var" => "quantity"}, 25]}, %{"abc" => 1}) == false
+      # assert JsonLogic.apply(%{"<" => [nil, 2]}) == false // Should be false, cannot compare numbers to nothing
+    end
+  end
+
 end

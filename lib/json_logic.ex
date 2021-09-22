@@ -233,7 +233,7 @@ defmodule JsonLogic do
     "in" => :operation_in,
     "cat" => :operation_cat,
     "substr" => :operation_substr,
-    "log" => :operation_log,
+    "log" => :operation_log
   }
 
   @doc """
@@ -241,18 +241,18 @@ defmodule JsonLogic do
   Accepts logic and data arguments as Map
   Returns resolved result as Map
   """
-  @spec apply(Map.t, Map.t) :: Map.t
+  @spec apply(Map.t(), Map.t()) :: Map.t()
   def apply(logic, data \\ nil)
 
   # operations selector branch of apply
   def apply(logic, data) when is_map(logic) and logic != %{} do
-    operation_name = logic |> Map.keys |> List.first
-    values = logic |> Map.values |> List.first
+    operation_name = logic |> Map.keys() |> List.first()
+    values = logic |> Map.values() |> List.first()
+
     case Map.fetch(@operations, operation_name) do
       {:ok, value} -> Kernel.apply(__MODULE__, value, [values, data])
       :error -> raise "Unrecognized operation `#{operation_name}`"
     end
-
   end
 
   # conclusive branch of apply
@@ -282,17 +282,25 @@ defmodule JsonLogic do
       string when is_binary(string) ->
         string
         |> String.split(".")
-        |> Enum.reduce(data, fn (key, acc) ->
+        |> Enum.reduce(data, fn key, acc ->
           cond do
-            is_nil(acc) -> nil
+            is_nil(acc) ->
+              nil
+
             is_list(acc) ->
               {index, _} = Integer.parse(key)
               Enum.at(acc, index)
-            is_map(acc) -> Map.get(acc, key)
-            true -> nil
+
+            is_map(acc) ->
+              Map.get(acc, key)
+
+            true ->
+              nil
           end
         end)
-      _ -> data
+
+      _ ->
+        data
     end
   end
 
@@ -316,6 +324,7 @@ defmodule JsonLogic do
     case JsonLogic.apply(keys, data) do
       list when is_list(list) ->
         operation_missing(list, data)
+
       elem ->
         operation_missing([elem], data)
     end
@@ -325,19 +334,25 @@ defmodule JsonLogic do
     case operation_missing(keys, data) do
       list when length(keys) - length(list) < min ->
         list
-      _ -> []
+
+      _ ->
+        []
     end
   end
 
   @doc false
   def operation_similar([left, right], data \\ nil) do
-    {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
+    {op1, op2} =
+      cast_comparison_operator(JsonLogic.apply(left, data), JsonLogic.apply(right, data))
+
     op1 == op2
   end
 
   @doc false
   def operation_not_similar([left, right], data \\ nil) do
-    {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
+    {op1, op2} =
+      cast_comparison_operator(JsonLogic.apply(left, data), JsonLogic.apply(right, data))
+
     op1 != op2
   end
 
@@ -427,62 +442,66 @@ defmodule JsonLogic do
 
   @doc false
   def operation_max(list, data) do
-    list |> Enum.map(fn(x) -> JsonLogic.apply(x, data) end) |> Enum.max
+    list |> Enum.map(fn x -> JsonLogic.apply(x, data) end) |> Enum.max()
   end
 
   @doc false
   def operation_min(list, data) do
-    list |> Enum.map(fn(x) -> JsonLogic.apply(x, data) end) |> Enum.min
+    list |> Enum.map(fn x -> JsonLogic.apply(x, data) end) |> Enum.min()
   end
 
   @doc false
   def operation_less_than([left, right], data) do
-    {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
-    if is_nil(op1) do
-        false
-      else
-        op1 < op2
-      end
+    {op1, op2} =
+      cast_comparison_operator(JsonLogic.apply(left, data), JsonLogic.apply(right, data))
 
+    if is_nil(op1) do
+      false
+    else
+      op1 < op2
+    end
   end
 
   @doc false
   def operation_less_than([left, middle, right | _], data) do
     operation_less_than([left, middle], data) &&
-    operation_less_than([middle, right], data)
+      operation_less_than([middle, right], data)
   end
 
   @doc false
   def operation_greater_than([left, right], data) do
-    {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
+    {op1, op2} =
+      cast_comparison_operator(JsonLogic.apply(left, data), JsonLogic.apply(right, data))
+
     if is_nil(op1) or is_nil(op2) do
-        false
-      else
-        op1 > op2
-      end
+      false
+    else
+      op1 > op2
+    end
   end
 
   @doc false
   def operation_greater_than([left, middle, right | _], data) do
     operation_greater_than([left, middle], data) &&
-    operation_greater_than([middle, right], data)
+      operation_greater_than([middle, right], data)
   end
 
   @doc false
   def operation_less_than_or_equal([left, right], data) do
-    {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
-    if is_nil(op1) or is_nil(op2) do
-        false
-      else
-        op1 <= op2
-      end
+    {op1, op2} =
+      cast_comparison_operator(JsonLogic.apply(left, data), JsonLogic.apply(right, data))
 
+    if is_nil(op1) or is_nil(op2) do
+      false
+    else
+      op1 <= op2
+    end
   end
 
   @doc false
   def operation_less_than_or_equal([left, middle, right | _], data) do
     operation_less_than_or_equal([left, middle], data) &&
-    operation_less_than_or_equal([middle, right], data)
+      operation_less_than_or_equal([middle, right], data)
   end
 
   @doc false
@@ -493,7 +512,7 @@ defmodule JsonLogic do
   @doc false
   def operation_greater_than_or_equal([left, middle, right | _], data) do
     operation_greater_than_or_equal([left, middle], data) &&
-    operation_greater_than_or_equal([middle, right], data)
+      operation_greater_than_or_equal([middle, right], data)
   end
 
   @doc false
@@ -509,19 +528,21 @@ defmodule JsonLogic do
           {num, _} = Integer.parse(str)
           total + num
         end
+
       num, total ->
         total + num
     end)
   end
 
-    def operation_addition(numbers, data) do
-      operation_addition([numbers], data)
-    end
-
+  def operation_addition(numbers, data) do
+    operation_addition([numbers], data)
+  end
 
   @doc false
   def operation_subtraction([first, last], data) do
-    {op1, op2} = cast_comparison_operator(JsonLogic.apply(first, data), JsonLogic.apply(last, data))
+    {op1, op2} =
+      cast_comparison_operator(JsonLogic.apply(first, data), JsonLogic.apply(last, data))
+
     op1 - op2
   end
 
@@ -543,13 +564,17 @@ defmodule JsonLogic do
           {num, _} = Integer.parse(str)
           total * num
         end
-      num, total -> total * num
+
+      num, total ->
+        total * num
     end)
   end
 
   @doc false
   def operation_division([first, last], data) do
-    {op1, op2} = cast_comparison_operator(JsonLogic.apply(first, data), JsonLogic.apply(last, data))
+    {op1, op2} =
+      cast_comparison_operator(JsonLogic.apply(first, data), JsonLogic.apply(last, data))
+
     op1 / op2
   end
 
@@ -562,15 +587,17 @@ defmodule JsonLogic do
   def operation_map([list, map_action], data) do
     case JsonLogic.apply(list, data) do
       list when is_list(list) ->
-        Enum.map(list, fn(item) -> JsonLogic.apply(map_action, item) end)
-      _ -> []
+        Enum.map(list, fn item -> JsonLogic.apply(map_action, item) end)
+
+      _ ->
+        []
     end
   end
 
   @doc false
   def operation_filter([list, filter_action], data) do
     JsonLogic.apply(list, data)
-    |> Enum.filter(fn(item) ->
+    |> Enum.filter(fn item ->
       operation_not_not(filter_action, item)
     end)
   end
@@ -582,12 +609,15 @@ defmodule JsonLogic do
 
   def operation_reduce([list, reduce_action, first], data) do
     eval_first = JsonLogic.apply(first, data)
+
     case JsonLogic.apply(list, data) do
       list when is_list(list) ->
-        Enum.reduce(list, eval_first, fn(item, accumulator) ->
+        Enum.reduce(list, eval_first, fn item, accumulator ->
           JsonLogic.apply(reduce_action, %{"current" => item, "accumulator" => accumulator})
         end)
-      _ -> first
+
+      _ ->
+        first
     end
   end
 
@@ -595,7 +625,7 @@ defmodule JsonLogic do
   def operation_all([list, test], data) do
     case JsonLogic.apply(list, data) do
       [] -> false
-      list when is_list(list) -> Enum.all?(list, fn(item) -> JsonLogic.apply(test, item) end)
+      list when is_list(list) -> Enum.all?(list, fn item -> JsonLogic.apply(test, item) end)
       _ -> false
     end
   end
@@ -603,13 +633,13 @@ defmodule JsonLogic do
   @doc false
   def operation_none([list, test], data) do
     JsonLogic.apply(list, data)
-    |> Enum.all?(fn(item) -> Kernel.if(JsonLogic.apply(test, item), do: false, else: true) end)
+    |> Enum.all?(fn item -> Kernel.if(JsonLogic.apply(test, item), do: false, else: true) end)
   end
 
   @doc false
   def operation_some([list, test], data) do
     JsonLogic.apply(list, data)
-    |> Enum.any?(fn(item) -> JsonLogic.apply(test, item) end)
+    |> Enum.any?(fn item -> JsonLogic.apply(test, item) end)
   end
 
   def operation_merge([], _data), do: []
@@ -618,6 +648,7 @@ defmodule JsonLogic do
     case JsonLogic.apply(elem, data) do
       list when is_list(list) ->
         list ++ operation_merge(rest, data)
+
       elem ->
         [elem | operation_merge(rest, data)]
     end
@@ -629,7 +660,7 @@ defmodule JsonLogic do
 
   @doc false
   def operation_in([member, list], data) when is_list(list) do
-    members = list |> Enum.map(fn(m) -> JsonLogic.apply(m, data) end)
+    members = list |> Enum.map(fn m -> JsonLogic.apply(m, data) end)
     Enum.member?(members, JsonLogic.apply(member, data))
   end
 
@@ -650,15 +681,15 @@ defmodule JsonLogic do
 
   @doc false
   def operation_cat(strings, data) when is_list(strings) do
-    strings |> Enum.map(fn(s) -> JsonLogic.apply(s, data) end) |> Enum.join
+    strings |> Enum.map(fn s -> JsonLogic.apply(s, data) end) |> Enum.join()
   end
 
-  def operation_cat(string, data)  do
+  def operation_cat(string, data) do
     JsonLogic.apply(string, data) |> to_string
   end
 
   @doc false
-  def operation_substr([string, offset], data)  do
+  def operation_substr([string, offset], data) do
     string
     |> JsonLogic.apply(data)
     |> String.slice(offset..-1)

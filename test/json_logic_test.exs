@@ -219,17 +219,42 @@ defmodule JsonLogicTest do
     end
   end
 
+  describe "all" do
+    test "returns false for `nil` lists" do
+      assert JsonLogic.apply(%{"all" => [nil, true]}, %{}) == false
+      assert JsonLogic.apply(%{"all" => [%{"var" => "list"}, true]}, %{}) == false
+      assert JsonLogic.apply(%{"all" => [%{"var" => "list"}, true]}, %{"list" => nil}) == false
+    end
+
+    test "returns false for non-lists" do
+      assert JsonLogic.apply(%{"all" => ["foo", true]}, %{}) == false
+      assert JsonLogic.apply(%{"all" => [42, true]}, %{}) == false
+    end
+  end
+
   describe "some" do
-    test "works for nil lists" do
+    test "returns false for `nil` lists" do
+      assert JsonLogic.apply(%{"some" => [nil, true]}, %{}) == false
       assert JsonLogic.apply(%{"some" => [%{"var" => "list"}, true]}, %{}) == false
       assert JsonLogic.apply(%{"some" => [%{"var" => "list"}, true]}, %{"list" => nil}) == false
+    end
+
+    test "returns false for non-lists" do
+      assert JsonLogic.apply(%{"some" => ["foo", true]}, %{}) == false
+      assert JsonLogic.apply(%{"some" => [42, true]}, %{}) == false
     end
   end
 
   describe "none" do
-    test "works for nil lists" do
+    test "returns true for `nil` lists" do
+      assert JsonLogic.apply(%{"none" => [nil, true]}, %{}) == true
       assert JsonLogic.apply(%{"none" => [%{"var" => "list"}, true]}, %{}) == true
       assert JsonLogic.apply(%{"none" => [%{"var" => "list"}, true]}, %{"list" => nil}) == true
+    end
+
+    test "returns true for non-lists" do
+      assert JsonLogic.apply(%{"none" => ["foo", true]}, %{}) == true
+      assert JsonLogic.apply(%{"none" => [42, true]}, %{}) == true
     end
   end
 end

@@ -479,19 +479,20 @@ defmodule JsonLogic.Base do
       @doc false
       def operation_none([list, test], data) do
         __MODULE__.apply(list, data)
-        |> nil_to_empty_list()
+        |> fallback_to_empty_list()
         |> Enum.all?(fn item -> Kernel.if(__MODULE__.apply(test, item), do: false, else: true) end)
       end
 
       @doc false
       def operation_some([list, test], data) do
         __MODULE__.apply(list, data)
-        |> nil_to_empty_list()
+        |> fallback_to_empty_list()
         |> Enum.any?(fn item -> __MODULE__.apply(test, item) end)
       end
 
-      defp nil_to_empty_list(nil), do: []
-      defp nil_to_empty_list(list), do: list
+      # Use empty list instead of `nil` or other "plain" values
+      defp fallback_to_empty_list(list) when is_list(list), do: list
+      defp fallback_to_empty_list(_), do: []
 
       def operation_merge([], _data), do: []
 

@@ -221,9 +221,27 @@ defmodule JsonLogicTest do
 
   describe "data does not contain the param specified in conditions" do
     test "cannot compare nil" do
+      assert JsonLogic.apply(%{"==" => [nil, nil]}) == true
+      assert JsonLogic.apply(%{"<=" => [nil, nil]}) == true
+      assert JsonLogic.apply(%{">=" => [nil, nil]}) == true
+
+      assert JsonLogic.apply(%{"<=" => [%{"var" => "optional"}, nil]}, %{"optional" => nil}) ==
+               true
+
+      assert JsonLogic.apply(%{">=" => [%{"var" => "optional"}, nil]}, %{"optional" => nil}) ==
+               true
+
+      assert JsonLogic.apply(%{"==" => [%{"var" => "optional"}, nil]}, %{"optional" => nil}) ==
+               true
+
       assert JsonLogic.apply(%{">" => [5, nil]}) == false
+      assert JsonLogic.apply(%{">" => [nil, 5]}) == false
       assert JsonLogic.apply(%{">=" => [5, nil]}) == false
-      assert JsonLogic.apply(%{"<" => [nil, 2]}) == false
+
+      assert JsonLogic.apply(%{"<" => [5, nil]}) == false
+      assert JsonLogic.apply(%{"<" => [nil, 5]}) == false
+      assert JsonLogic.apply(%{"<=" => [5, nil]}) == false
+
       assert JsonLogic.apply(%{">" => [%{"var" => "quantity"}, 25]}, %{"abc" => 1}) == false
       assert JsonLogic.apply(%{"<" => [%{"var" => "quantity"}, 25]}, %{"abc" => 1}) == false
 

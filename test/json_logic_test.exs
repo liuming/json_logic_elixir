@@ -70,19 +70,24 @@ defmodule JsonLogicTest do
 
   describe "if" do
     test "returns var when true" do
-      assert JsonLogic.apply(%{"if" => [true, %{"var" => "key"}, "unexpected" ]}, %{"key" => "yes"}) == "yes"
+      assert JsonLogic.apply(%{"if" => [true, %{"var" => "key"}, "unexpected"]}, %{"key" => "yes"}) ==
+               "yes"
     end
 
     test "returns var when false" do
-      assert JsonLogic.apply(%{"if" => [false, "unexpected", %{"var" => "key"} ]}, %{"key" => "no"}) == "no"
+      assert JsonLogic.apply(%{"if" => [false, "unexpected", %{"var" => "key"}]}, %{"key" => "no"}) ==
+               "no"
     end
 
     test "returns var with multiple branches" do
-      assert JsonLogic.apply(%{"if" => [false, "unexpected", false, "unexpected", %{"var" => "key"} ]}, %{"key" => "default"}) == "default"
+      assert JsonLogic.apply(
+               %{"if" => [false, "unexpected", false, "unexpected", %{"var" => "key"}]},
+               %{"key" => "default"}
+             ) == "default"
     end
 
     test "returns nil when else is not present" do
-      assert JsonLogic.apply(%{"if" => [false, "unexpected" ]}) == nil
+      assert JsonLogic.apply(%{"if" => [false, "unexpected"]}) == nil
     end
   end
 
@@ -104,13 +109,19 @@ defmodule JsonLogicTest do
 
   describe "+" do
     test "returns added result of vars" do
-      assert JsonLogic.apply(%{"+" => [%{"var" => "left"}, %{"var" => "right"}]}, %{"left" => 5, "right" => 2}) == 7
+      assert JsonLogic.apply(%{"+" => [%{"var" => "left"}, %{"var" => "right"}]}, %{
+               "left" => 5,
+               "right" => 2
+             }) == 7
     end
   end
 
   describe "-" do
     test "returns subtraced result of vars" do
-      assert JsonLogic.apply(%{"-" => [%{"var" => "left"}, %{"var" => "right"}]}, %{"left" => 5, "right" => 2}) == 3
+      assert JsonLogic.apply(%{"-" => [%{"var" => "left"}, %{"var" => "right"}]}, %{
+               "left" => 5,
+               "right" => 2
+             }) == 3
     end
 
     test "returns negative of a var" do
@@ -120,54 +131,91 @@ defmodule JsonLogicTest do
 
   describe "*" do
     test "returns multiplied result of vars" do
-      assert JsonLogic.apply(%{"*" => [%{"var" => "left"}, %{"var" => "right"}]}, %{"left" => 5, "right" => 2}) == 10
+      assert JsonLogic.apply(%{"*" => [%{"var" => "left"}, %{"var" => "right"}]}, %{
+               "left" => 5,
+               "right" => 2
+             }) == 10
     end
   end
 
   describe "/" do
     test "returns multiplied result of vars" do
-      assert JsonLogic.apply(%{"/" => [%{"var" => "left"}, %{"var" => "right"}]}, %{"left" => 5, "right" => 2}) == 2.5
+      assert JsonLogic.apply(%{"/" => [%{"var" => "left"}, %{"var" => "right"}]}, %{
+               "left" => 5,
+               "right" => 2
+             }) == 2.5
     end
   end
 
   describe "map" do
     test "returns mapped integers" do
-      assert JsonLogic.apply(%{"map" => [ %{"var" => "integers"}, %{"*" => [%{"var" => ""}, 2]} ]}, %{"integers" => [1,2,3,4,5]}) == [2,4,6,8,10]
+      assert JsonLogic.apply(
+               %{"map" => [%{"var" => "integers"}, %{"*" => [%{"var" => ""}, 2]}]},
+               %{"integers" => [1, 2, 3, 4, 5]}
+             ) == [2, 4, 6, 8, 10]
     end
   end
 
   describe "filter" do
     test "returns filtered integers" do
-      assert JsonLogic.apply(%{"filter" => [ %{"var" => "integers"}, %{">" => [%{"var" => ""}, 2]} ]}, %{"integers" => [1,2,3,4,5]}) == [3,4,5]
+      assert JsonLogic.apply(
+               %{"filter" => [%{"var" => "integers"}, %{">" => [%{"var" => ""}, 2]}]},
+               %{"integers" => [1, 2, 3, 4, 5]}
+             ) == [3, 4, 5]
     end
 
     test "returns filtered objects" do
       data = %{"objects" => [%{"uid" => "A"}, %{"uid" => "B"}]}
-      assert JsonLogic.apply(%{"filter" => [ %{"var" => "objects"}, %{"==" => [%{"var" => "uid"}, "A"]} ]}, data) == [%{"uid" => "A"}]
+
+      assert JsonLogic.apply(
+               %{"filter" => [%{"var" => "objects"}, %{"==" => [%{"var" => "uid"}, "A"]}]},
+               data
+             ) == [%{"uid" => "A"}]
     end
   end
 
   describe "reduce" do
     test "returns reduced integers" do
-      assert JsonLogic.apply(%{"reduce" => [ %{"var" => "integers"}, %{"+" => [%{"var" => "current"}, %{"var" => "accumulator"}]}, 0]}, %{"integers" => [1,2,3]}) == 6
+      assert JsonLogic.apply(
+               %{
+                 "reduce" => [
+                   %{"var" => "integers"},
+                   %{"+" => [%{"var" => "current"}, %{"var" => "accumulator"}]},
+                   0
+                 ]
+               },
+               %{"integers" => [1, 2, 3]}
+             ) == 6
     end
   end
 
   describe "in" do
     test "returns true from vars" do
-      assert JsonLogic.apply(%{"in" => [%{"var" => "find"}, %{"var" => "from"}]}, %{"find" => "sub", "from" => "substring"}) == true
+      assert JsonLogic.apply(%{"in" => [%{"var" => "find"}, %{"var" => "from"}]}, %{
+               "find" => "sub",
+               "from" => "substring"
+             }) == true
     end
 
     test "returns true from var list" do
-      assert JsonLogic.apply(%{"in" => [%{"var" => "find"}, %{"var" => "from"}]}, %{"find" => "sub", "from" => ["sub", "string"]}) == true
+      assert JsonLogic.apply(%{"in" => [%{"var" => "find"}, %{"var" => "from"}]}, %{
+               "find" => "sub",
+               "from" => ["sub", "string"]
+             }) == true
     end
 
     test "returns false from nil" do
-      assert JsonLogic.apply(%{"in" => [%{"var" => "find"}, %{"var" => "from"}]}, %{"find" => "sub", "from" => nil}) == false
+      assert JsonLogic.apply(%{"in" => [%{"var" => "find"}, %{"var" => "from"}]}, %{
+               "find" => "sub",
+               "from" => nil
+             }) == false
     end
 
     test "returns false from var list" do
-      assert JsonLogic.apply(%{"in" => [%{"var" => "find"}, %{"var" => "from"}]}, %{"find" => "sub", "from" => ["A", "B"]}) == false
+      assert JsonLogic.apply(%{"in" => [%{"var" => "find"}, %{"var" => "from"}]}, %{
+               "find" => "sub",
+               "from" => ["A", "B"]
+             }) == false
     end
   end
 end

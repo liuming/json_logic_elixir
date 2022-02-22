@@ -198,7 +198,7 @@ defmodule JsonLogic do
 
   @falsey [0, "", [], nil, false]
 
-  @operations %{
+  @base_operations %{
     "var" => :operation_var,
     "missing" => :operation_missing,
     "missing_some" => :operation_missing_some,
@@ -233,32 +233,162 @@ defmodule JsonLogic do
     "in" => :operation_in,
     "cat" => :operation_cat,
     "substr" => :operation_substr,
-    "log" => :operation_log,
+    "log" => :operation_log
   }
+
+  @typedoc """
+  JsonLogic operations definition.
+  Should be declared as `Map.t` with values format:
+
+   - `"operation_name" => function_name`
+   - `"operation_name" => {module, function_name}`
+
+  """
+  @type operations_definition :: %{binary => atom} | %{binary => {module, atom}}
+
+  @doc false
+  defmacro __using__(_opts) do
+    quote do
+      @before_compile unquote(__MODULE__)
+
+      Module.register_attribute(__MODULE__, :operations, accumulate: true)
+
+      # Prebuilding default list of operations
+      unquote(__MODULE__).operations()
+      |> Enum.each(fn {op, func_name} ->
+        @operations {op, {unquote(__MODULE__), func_name}}
+      end)
+
+      def apply(logic, data \\ nil) do
+        __MODULE__.operations()
+        |> JsonLogic.apply_custom(logic, data)
+      end
+    end
+  end
+
+  @doc false
+  defmacro __before_compile__(env) do
+    ops =
+      env.module
+      |> Module.get_attribute(:operations)
+      |> Enum.into(%{})
+
+    quote do
+      @doc false
+      def operations(), do: unquote(Macro.escape(ops))
+    end
+  end
+
+  @doc """
+  Adds new custom JsonLogic operation.
+
+  By default new operation will be added to list of default `JsonLogic` operations, so
+  all existing operations will be available in your module.
+
+  Note: you have to add `use JsonLogic` in your module before using `add_operation/3`
+
+  ## Example:
+
+      defmodule CustomJsonLogic do
+        use JsonLogic
+
+        JsonLogic.add_operation("plus", __MODULE__, :plus)
+
+        def plus([a, b], _), do: a + b
+      end
+
+      CustomJsonLogic.apply(%{"plus" => [2, 3]}) # => 5
+      CustomJsonLogic.apply(%{"+" => [2, 3]}) # default operation => 5
+
+  Another function that will be exposed in your module is `operations/1` that will have list of
+  custom operations defined for your module.
+  """
+  defmacro add_operation(operation_name, module, function_name) do
+    quote do
+      @operations {unquote(operation_name), {unquote(module), unquote(function_name)}}
+    end
+  end
+
+  @doc """
+  Gets list of predefined JsonLogic operations.
+  """
+  @spec operations() :: operations_definition()
+  def operations(), do: @base_operations
 
   @doc """
   Apply JsonLogic.
   Accepts logic and data arguments as Map
   Returns resolved result as Map
   """
-  @spec apply(Map.t, Map.t) :: Map.t
+  @spec apply(Map.t(), Map.t()) :: Map.t()
   def apply(logic, data \\ nil)
 
   # operations selector branch of apply
-  def apply(logic, data) when is_map(logic) and logic != %{} do
-    operation_name = logic |> Map.keys |> List.first
-    values = logic |> Map.values |> List.first
-    case Map.fetch(@operations, operation_name) do
+  def apply(logic, data) when is_map(logic) and logic != %{},
+    do: apply_custom(@base_operations, logic, data)
+
+  # conclusive branch of apply
+  def apply(logic, _),
+    do: logic
+
+  @doc """
+  Apply JsonLogic with custom list of operations.
+
+  Accepts logic and data arguments as Map.
+  Returns resolved result as Map.
+
+  For example:
+
+      defmodule CustomJsonLogic do
+
+        def plus([a, b], data \\ nil), do: a + b
+
+      end
+
+      %{
+        "plus" => {CustomJsonLogic, :plus}
+      }
+      |> JsonLogic.apply_custom(%{"plus" => [2, 3]}) # will return 5
+
+
+  Extending default operations is possible using `JsonLogic.operations()` function.
+  Note: if might override default operation by passing exising `operation_name`.
+
+  For example:
+
+      defmodule CustomJsonLogic do
+
+        @custom_operations %{
+          "plus" => {__MODULE__, :plus}
+        }
+
+        def operations(),
+          do: Map.marge(JsonLogic.operations(), @custom_operations)
+
+        def plus([a, b], _), do: a + b
+
+      end
+
+      CustomJsonLogic.operations()
+      |> JsonLogic.apply_custom([2, 3]) # Will return 5
+
+  """
+  @spec apply_custom(operations_definition(), Map.t(), Map.t() | nil) :: Map.t()
+  def apply_custom(operations, logic, data \\ nil)
+
+  def apply_custom(operations, logic, data) when is_map(operations) and operations != %{} do
+    operation_name = logic |> Map.keys() |> List.first()
+    values = logic |> Map.values() |> List.first()
+
+    case Map.fetch(operations, operation_name) do
+      {:ok, {module, value}} -> Kernel.apply(module, value, [values, data])
       {:ok, value} -> Kernel.apply(__MODULE__, value, [values, data])
       :error -> raise "Unrecognized operation `#{operation_name}`"
     end
-
   end
 
-  # conclusive branch of apply
-  def apply(logic, _) do
-    logic
-  end
+  def apply_custom(_, logic, _),
+    do: logic
 
   @doc false
   def operation_var("", data) do
@@ -282,17 +412,25 @@ defmodule JsonLogic do
       string when is_binary(string) ->
         string
         |> String.split(".")
-        |> Enum.reduce(data, fn (key, acc) ->
+        |> Enum.reduce(data, fn key, acc ->
           cond do
-            is_nil(acc) -> nil
+            is_nil(acc) ->
+              nil
+
             is_list(acc) ->
               {index, _} = Integer.parse(key)
               Enum.at(acc, index)
-            is_map(acc) -> Map.get(acc, key)
-            true -> nil
+
+            is_map(acc) ->
+              Map.get(acc, key)
+
+            true ->
+              nil
           end
         end)
-      _ -> data
+
+      _ ->
+        data
     end
   end
 
@@ -316,6 +454,7 @@ defmodule JsonLogic do
     case JsonLogic.apply(keys, data) do
       list when is_list(list) ->
         operation_missing(list, data)
+
       elem ->
         operation_missing([elem], data)
     end
@@ -325,19 +464,25 @@ defmodule JsonLogic do
     case operation_missing(keys, data) do
       list when length(keys) - length(list) < min ->
         list
-      _ -> []
+
+      _ ->
+        []
     end
   end
 
   @doc false
   def operation_similar([left, right], data \\ nil) do
-    {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
+    {op1, op2} =
+      cast_comparison_operator(JsonLogic.apply(left, data), JsonLogic.apply(right, data))
+
     op1 == op2
   end
 
   @doc false
   def operation_not_similar([left, right], data \\ nil) do
-    {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
+    {op1, op2} =
+      cast_comparison_operator(JsonLogic.apply(left, data), JsonLogic.apply(right, data))
+
     op1 != op2
   end
 
@@ -427,24 +572,26 @@ defmodule JsonLogic do
 
   @doc false
   def operation_max(list, data) do
-    list |> Enum.map(fn(x) -> JsonLogic.apply(x, data) end) |> Enum.max
+    list |> Enum.map(fn x -> JsonLogic.apply(x, data) end) |> Enum.max()
   end
 
   @doc false
   def operation_min(list, data) do
-    list |> Enum.map(fn(x) -> JsonLogic.apply(x, data) end) |> Enum.min
+    list |> Enum.map(fn x -> JsonLogic.apply(x, data) end) |> Enum.min()
   end
 
   @doc false
   def operation_less_than([left, right], data) do
-    {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
+    {op1, op2} =
+      cast_comparison_operator(JsonLogic.apply(left, data), JsonLogic.apply(right, data))
+
     op1 < op2
   end
 
   @doc false
   def operation_less_than([left, middle, right | _], data) do
     operation_less_than([left, middle], data) &&
-    operation_less_than([middle, right], data)
+      operation_less_than([middle, right], data)
   end
 
   @doc false
@@ -455,19 +602,21 @@ defmodule JsonLogic do
   @doc false
   def operation_greater_than([left, middle, right | _], data) do
     operation_greater_than([left, middle], data) &&
-    operation_greater_than([middle, right], data)
+      operation_greater_than([middle, right], data)
   end
 
   @doc false
   def operation_less_than_or_equal([left, right], data) do
-    {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
+    {op1, op2} =
+      cast_comparison_operator(JsonLogic.apply(left, data), JsonLogic.apply(right, data))
+
     op1 <= op2
   end
 
   @doc false
   def operation_less_than_or_equal([left, middle, right | _], data) do
     operation_less_than_or_equal([left, middle], data) &&
-    operation_less_than_or_equal([middle, right], data)
+      operation_less_than_or_equal([middle, right], data)
   end
 
   @doc false
@@ -478,7 +627,7 @@ defmodule JsonLogic do
   @doc false
   def operation_greater_than_or_equal([left, middle, right | _], data) do
     operation_greater_than_or_equal([left, middle], data) &&
-    operation_greater_than_or_equal([middle, right], data)
+      operation_greater_than_or_equal([middle, right], data)
   end
 
   @doc false
@@ -494,19 +643,21 @@ defmodule JsonLogic do
           {num, _} = Integer.parse(str)
           total + num
         end
+
       num, total ->
         total + num
     end)
   end
 
-    def operation_addition(numbers, data) do
-      operation_addition([numbers], data)
-    end
-
+  def operation_addition(numbers, data) do
+    operation_addition([numbers], data)
+  end
 
   @doc false
   def operation_subtraction([first, last], data) do
-    {op1, op2} = cast_comparison_operator(JsonLogic.apply(first, data), JsonLogic.apply(last, data))
+    {op1, op2} =
+      cast_comparison_operator(JsonLogic.apply(first, data), JsonLogic.apply(last, data))
+
     op1 - op2
   end
 
@@ -528,13 +679,17 @@ defmodule JsonLogic do
           {num, _} = Integer.parse(str)
           total * num
         end
-      num, total -> total * num
+
+      num, total ->
+        total * num
     end)
   end
 
   @doc false
   def operation_division([first, last], data) do
-    {op1, op2} = cast_comparison_operator(JsonLogic.apply(first, data), JsonLogic.apply(last, data))
+    {op1, op2} =
+      cast_comparison_operator(JsonLogic.apply(first, data), JsonLogic.apply(last, data))
+
     op1 / op2
   end
 
@@ -547,15 +702,17 @@ defmodule JsonLogic do
   def operation_map([list, map_action], data) do
     case JsonLogic.apply(list, data) do
       list when is_list(list) ->
-        Enum.map(list, fn(item) -> JsonLogic.apply(map_action, item) end)
-      _ -> []
+        Enum.map(list, fn item -> JsonLogic.apply(map_action, item) end)
+
+      _ ->
+        []
     end
   end
 
   @doc false
   def operation_filter([list, filter_action], data) do
     JsonLogic.apply(list, data)
-    |> Enum.filter(fn(item) ->
+    |> Enum.filter(fn item ->
       operation_not_not(filter_action, item)
     end)
   end
@@ -567,12 +724,15 @@ defmodule JsonLogic do
 
   def operation_reduce([list, reduce_action, first], data) do
     eval_first = JsonLogic.apply(first, data)
+
     case JsonLogic.apply(list, data) do
       list when is_list(list) ->
-        Enum.reduce(list, eval_first, fn(item, accumulator) ->
+        Enum.reduce(list, eval_first, fn item, accumulator ->
           JsonLogic.apply(reduce_action, %{"current" => item, "accumulator" => accumulator})
         end)
-      _ -> first
+
+      _ ->
+        first
     end
   end
 
@@ -580,7 +740,7 @@ defmodule JsonLogic do
   def operation_all([list, test], data) do
     case JsonLogic.apply(list, data) do
       [] -> false
-      list when is_list(list) -> Enum.all?(list, fn(item) -> JsonLogic.apply(test, item) end)
+      list when is_list(list) -> Enum.all?(list, fn item -> JsonLogic.apply(test, item) end)
       _ -> false
     end
   end
@@ -588,13 +748,13 @@ defmodule JsonLogic do
   @doc false
   def operation_none([list, test], data) do
     JsonLogic.apply(list, data)
-    |> Enum.all?(fn(item) -> Kernel.if(JsonLogic.apply(test, item), do: false, else: true) end)
+    |> Enum.all?(fn item -> Kernel.if(JsonLogic.apply(test, item), do: false, else: true) end)
   end
 
   @doc false
   def operation_some([list, test], data) do
     JsonLogic.apply(list, data)
-    |> Enum.any?(fn(item) -> JsonLogic.apply(test, item) end)
+    |> Enum.any?(fn item -> JsonLogic.apply(test, item) end)
   end
 
   def operation_merge([], _data), do: []
@@ -603,6 +763,7 @@ defmodule JsonLogic do
     case JsonLogic.apply(elem, data) do
       list when is_list(list) ->
         list ++ operation_merge(rest, data)
+
       elem ->
         [elem | operation_merge(rest, data)]
     end
@@ -614,7 +775,7 @@ defmodule JsonLogic do
 
   @doc false
   def operation_in([member, list], data) when is_list(list) do
-    members = list |> Enum.map(fn(m) -> JsonLogic.apply(m, data) end)
+    members = list |> Enum.map(fn m -> JsonLogic.apply(m, data) end)
     Enum.member?(members, JsonLogic.apply(member, data))
   end
 
@@ -635,15 +796,15 @@ defmodule JsonLogic do
 
   @doc false
   def operation_cat(strings, data) when is_list(strings) do
-    strings |> Enum.map(fn(s) -> JsonLogic.apply(s, data) end) |> Enum.join
+    strings |> Enum.map(fn s -> JsonLogic.apply(s, data) end) |> Enum.join()
   end
 
-  def operation_cat(string, data)  do
+  def operation_cat(string, data) do
     JsonLogic.apply(string, data) |> to_string
   end
 
   @doc false
-  def operation_substr([string, offset], data)  do
+  def operation_substr([string, offset], data) do
     string
     |> JsonLogic.apply(data)
     |> String.slice(offset..-1)

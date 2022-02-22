@@ -5,7 +5,7 @@ defmodule SpecificationTest do
     Application.get_env(:json_logic_elixir, :json_library, Poison)
   end
 
-  defp encode_json(content, opts \\ []) do
+  defp encode_json(content, opts) do
     json_library().encode(content, opts)
   end
 

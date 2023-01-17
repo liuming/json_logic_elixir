@@ -279,4 +279,30 @@ defmodule JsonLogicTest do
       assert JsonLogic.apply(rules, data) == false
     end
   end
+
+  describe "any_in" do
+    test "input is an array, if any element in the array is inside the rule, return true" do
+      rule = %{"any_in" => [%{"var" => "item_types"}, ["package", "document"]]}
+      data = %{"item_types" => ["package", "pallet"], "service_type" => "Same Day"}
+      assert JsonLogic.apply(rule, data) == true
+
+      rule = %{
+        "and" => [
+          %{"any_in" => [%{"var" => "item_types"}, ["package", "document"]]},
+          %{"==" => [%{"var" => "service_type"}, "Same Day"]}
+        ]
+      }
+
+      assert JsonLogic.apply(rule, data) == true
+
+      rule = %{
+        "and" => [
+          %{"any_in" => [%{"var" => "item_types"}, ["package", "document"]]},
+          %{"==" => [%{"var" => "service_type"}, "Next Day"]}
+        ]
+      }
+
+      assert JsonLogic.apply(rule, data) == false
+    end
+  end
 end

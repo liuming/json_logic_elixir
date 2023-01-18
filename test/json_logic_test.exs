@@ -279,4 +279,62 @@ defmodule JsonLogicTest do
       assert JsonLogic.apply(rules, data) == false
     end
   end
+
+  describe "any_in" do
+    test "input(data[var]) is an array, if any element in the input array is inside the rule, return true" do
+      rule = %{"any_in" => [%{"var" => "item_types"}, ["package", "document"]]}
+      data = %{"item_types" => ["package", "pallet"], "service_type" => "Same Day"}
+      assert JsonLogic.apply(rule, data) == true
+
+      rule = %{
+        "and" => [
+          %{"any_in" => [%{"var" => "item_types"}, ["package", "document"]]},
+          %{"==" => [%{"var" => "service_type"}, "Same Day"]}
+        ]
+      }
+
+      assert JsonLogic.apply(rule, data) == true
+
+      rule = %{
+        "and" => [
+          %{"any_in" => [%{"var" => "item_types"}, ["package", "document"]]},
+          %{"==" => [%{"var" => "service_type"}, "Next Day"]}
+        ]
+      }
+
+      assert JsonLogic.apply(rule, data) == false
+    end
+  end
+
+  describe "not_in" do
+    test "input(data[var)]) is an array, if there are any elements in the input array that is not inside the rule, return true" do
+      rule = %{"not_in" => [%{"var" => "item_types"}, ["package", "document"]]}
+      data = %{"item_types" => ["package"], "service_type" => "Same Day"}
+      assert JsonLogic.apply(rule, data) == false
+
+      data = %{"item_types" => ["package", "document"], "service_type" => "Same Day"}
+      assert JsonLogic.apply(rule, data) == false
+
+      data = %{"item_types" => ["package", "pallet"], "service_type" => "Same Day"}
+      assert JsonLogic.apply(rule, data) == true
+
+      rule = %{
+        "and" => [
+          %{"any_in" => [%{"var" => "item_types"}, ["package", "document"]]},
+          %{"==" => [%{"var" => "service_type"}, "Same Day"]}
+        ]
+      }
+
+      assert JsonLogic.apply(rule, data) == true
+
+      rule = %{
+        "and" => [
+          %{"any_in" => [%{"var" => "item_types"}, ["package", "document"]]},
+          %{"==" => [%{"var" => "service_type"}, "Next Day"]}
+        ]
+      }
+
+      assert JsonLogic.apply(rule, data) == false
+    end
+  end
 end

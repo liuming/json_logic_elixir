@@ -234,8 +234,10 @@ defmodule JsonLogic do
     "cat" => :operation_cat,
     "substr" => :operation_substr,
     "log" => :operation_log,
-    "any_in" => :operation_any_in,
-    "not_in" => :operation_not_in
+    "has_this" => :operation_has_this,
+    "not_has_this" => :operation_not_has_this,
+    "has" => :operation_has,
+    "not_has" => :operation_not_has
   }
 
   @doc """
@@ -704,23 +706,29 @@ defmodule JsonLogic do
     operation_in([JsonLogic.apply(find, data), JsonLogic.apply(from, data)], data)
   end
 
-  def operation_any_in([member, list], data) when is_list(list) do
-    members = list |> Enum.map(fn m -> JsonLogic.apply(m, data) end)
+  def operation_has_this([member, d], data) do
+    operation_has([member, [d]], data)
+  end
+
+  def operation_not_has_this([member, d], data) do
+    operation_not_has([member, [d]], data)
+  end
+
+  def operation_has([member, list], data) when is_list(list) do
     input_list = JsonLogic.apply(member, data)
 
     input_list
     |> Enum.any?(fn val ->
-      Enum.member?(members, val)
+      Enum.member?(list, val)
     end)
   end
 
-  def operation_not_in([member, list], data) when is_list(list) do
-    members = list |> Enum.map(fn m -> JsonLogic.apply(m, data) end)
+  def operation_not_has([member, list], data) when is_list(list) do
     input_list = JsonLogic.apply(member, data)
 
     input_list
     |> Enum.any?(fn val ->
-      not Enum.member?(members, val)
+      not Enum.member?(list, val)
     end)
   end
 

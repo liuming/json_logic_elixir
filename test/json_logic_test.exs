@@ -461,6 +461,23 @@ defmodule JsonLogicTest do
       logic = %{"if" => [true, "apple", true, "banana", true, "carrot", "date"]}
       assert JsonLogic.resolve(logic) == "apple"
     end
+
+    test "returns object" do
+      logic = %{
+        "if" => [
+          %{"==" => [%{"var" => "foo"}, "bar"]},
+          %{"foo" => "is_bar", "path" => "foo_is_bar"},
+          %{"foo" => "not_bar", "path" => "default_object"}
+        ]
+      }
+
+      data = %{"foo" => "bar"}
+
+      assert %{
+               "foo" => "is_bar",
+               "path" => "foo_is_bar"
+             } == JsonLogic.resolve(logic, data)
+    end
   end
 
   describe "max" do

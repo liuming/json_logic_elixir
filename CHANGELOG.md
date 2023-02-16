@@ -14,5 +14,7 @@
 - fixed: `min` returning the original minimum value and not the coerced value.
 - fixed: infinite recursive loop for ill formed `in` clauses.
 - fixed: typespec for `resolve/2`.
+- fixed: return json object provided in `if` statements.
+- fixed: return the provided json object if the map size is larger than 1.
 - removed: optional dependencies for `jason` and `poison`.
 - added: Support for `Decimal` to be used.

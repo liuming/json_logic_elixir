@@ -15,7 +15,6 @@ defmodule JsonLogic.Mixfile do
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
     [
       extra_applications: [:logger]
@@ -33,11 +32,12 @@ defmodule JsonLogic.Mixfile do
 
   defp deps do
     [
-      {:jason, ">= 1.0.0", optional: true},
-      {:poison, ">= 4.0.1", optional: true},
       {:credo, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.22", only: :dev, runtime: false}
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
+      {:dialyxir, "~> 1.2.0", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.29", only: :dev, runtime: false}
+    ]
+  end
+
   defp docs do
     [
       main: "JsonLogic",
@@ -49,7 +49,8 @@ defmodule JsonLogic.Mixfile do
 
   defp docs_extras do
     [
-      "README.md": [title: "Readme"]
+      "README.md": [title: "Readme"],
+      "CHANGELOG.md": [title: "Changelog"]
     ]
   end
 end

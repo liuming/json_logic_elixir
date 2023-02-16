@@ -1,524 +1,520 @@
 defmodule JsonLogic do
   @moduledoc """
   An Elixir implementation of [JsonLogic](http://jsonlogic.com/).
-
-  ## Examples
-      iex> JsonLogic.apply(nil)
-      nil
-
-      iex> JsonLogic.apply(%{})
-      %{}
-
-      iex> JsonLogic.apply(%{"var" => "key"}, %{"key" => "value"})
-      "value"
-
-      iex> JsonLogic.apply(%{"var" => "nested.key"}, %{"nested" => %{"key" => "value"}})
-      "value"
-
-      iex> JsonLogic.apply(%{"var" => ["none", "default"]}, %{"key" => "value"})
-      "default"
-
-      iex> JsonLogic.apply(%{"var" => 0}, ~w{a b})
-      "a"
-
-      iex> JsonLogic.apply(%{"==" => [1, 1]})
-      true
-
-      iex> JsonLogic.apply(%{"==" => [0, 1]})
-      false
-
-      iex> JsonLogic.apply(%{"!=" => [1, 1]})
-      false
-
-      iex> JsonLogic.apply(%{"!=" => [0, 1]})
-      true
-
-      iex> JsonLogic.apply(%{"===" => [1, 1]})
-      true
-
-      iex> JsonLogic.apply(%{"===" => [1, 1.0]})
-      false
-
-      iex> JsonLogic.apply(%{"===" => [1, %{"var" => "key"}]}, %{"key" => 1})
-      true
-
-      iex> JsonLogic.apply(%{"!==" => [1, 1.0]})
-      true
-
-      iex> JsonLogic.apply(%{"!==" => [1, 1]})
-      false
-
-      iex> JsonLogic.apply(%{"!" => true})
-      false
-
-      iex> JsonLogic.apply(%{"!" => false})
-      true
-
-      iex> JsonLogic.apply(%{"if" => [true, "yes", "no" ]})
-      "yes"
-
-      iex> JsonLogic.apply(%{"if" => [false, "yes", "no" ]})
-      "no"
-
-      iex> JsonLogic.apply(%{"if" => [false, "unexpected", false, "unexpected", "default" ]})
-      "default"
-
-      iex> JsonLogic.apply(%{"or" => [false, nil, "truthy"]})
-      "truthy"
-
-      iex> JsonLogic.apply(%{"or" => ["first", "truthy"]})
-      "first"
-
-      iex> JsonLogic.apply(%{"and" => [false, "falsy"]})
-      false
-
-      iex> JsonLogic.apply(%{"and" => [true, 1, "truthy"]})
-      "truthy"
-
-      iex> JsonLogic.apply(%{"max" => [1,2,3]})
-      3
-
-      iex> JsonLogic.apply(%{"min" => [1,2,3]})
-      1
-
-      iex> JsonLogic.apply(%{"<" => [0, 1]})
-      true
-
-      iex> JsonLogic.apply(%{"<" => [1, 0]})
-      false
-
-      iex> JsonLogic.apply(%{"<" => [0, 1, 2]})
-      true
-
-      iex> JsonLogic.apply(%{"<" => [0, 2, 1]})
-      false
-
-      iex> JsonLogic.apply(%{">" => [1, 0]})
-      true
-
-      iex> JsonLogic.apply(%{">" => [0, 1]})
-      false
-
-      iex> JsonLogic.apply(%{">" => [2, 1, 0]})
-      true
-
-      iex> JsonLogic.apply(%{">" => [2, 0, 1]})
-      false
-
-      iex> JsonLogic.apply(%{"<=" => [1, 1]})
-      true
-
-      iex> JsonLogic.apply(%{"<=" => [1, 0]})
-      false
-
-      iex> JsonLogic.apply(%{"<=" => [1, 1, 2]})
-      true
-
-      iex> JsonLogic.apply(%{"<=" => [1, 0, 2]})
-      false
-
-      iex> JsonLogic.apply(%{">=" => [1, 1]})
-      true
-
-      iex> JsonLogic.apply(%{">=" => [0, 1]})
-      false
-
-      iex> JsonLogic.apply(%{">=" => [1, 1, 0]})
-      true
-
-      iex> JsonLogic.apply(%{">=" => [0, 1, 2]})
-      false
-
-      iex> JsonLogic.apply(%{"+" => [1,2,3]})
-      6
-
-      iex> JsonLogic.apply(%{"+" => [2]})
-      2
-
-      iex> JsonLogic.apply(%{"-" => [7,4]})
-      3
-
-      iex> JsonLogic.apply(%{"-" => [2]})
-      -2
-
-      iex> JsonLogic.apply(%{"*" => [2,3,4]})
-      24
-
-      iex> JsonLogic.apply(%{"/" => [5,2]})
-      2.5
-
-      iex> JsonLogic.apply(%{"%" => [7, 3]})
-      1
-
-      iex> JsonLogic.apply(%{"map" => [ [1,2,3,4,5], %{"*" => [%{"var" => ""}, 2]} ]})
-      [2,4,6,8,10]
-
-      iex> JsonLogic.apply(%{"filter" => [ [1,2,3,4,5], %{">" => [%{"var" => ""}, 2]} ]})
-      [3,4,5]
-
-      iex> JsonLogic.apply(%{"reduce" => [ [1,2,3,4,5], %{"+" => [%{"var" => "current"}, %{"var" => "accumulator"}]}, 0]})
-      15
-
-      iex> JsonLogic.apply(%{"all" => [ [1,2,3], %{">" => [ %{"var" => ""}, 0 ]} ]})
-      true
-
-      iex> JsonLogic.apply(%{"all" => [ [-1,2,3], %{">" => [ %{"var" => ""}, 0 ]} ]})
-      false
-
-      iex> JsonLogic.apply(%{"none" => [ [1,2,3], %{"<" => [ %{"var" => ""}, 0 ]} ]})
-      true
-
-      iex> JsonLogic.apply(%{"none" => [ [-1,2,3], %{"<" => [ %{"var" => ""}, 0 ]} ]})
-      false
-
-      iex> JsonLogic.apply(%{"some" => [ [-1,2,3], %{"<" => [ %{"var" => ""}, 0 ]} ]})
-      true
-
-      iex> JsonLogic.apply(%{"some" => [ [1,2,3], %{"<" => [ %{"var" => ""}, 0 ]} ]})
-      false
-
-      iex> JsonLogic.apply(%{"in" => ["sub", "substring"]})
-      true
-
-      iex> JsonLogic.apply(%{"in" => ["na", "substring"]})
-      false
-
-      iex> JsonLogic.apply(%{"in" => ["a", ["a", "b", "c"]]})
-      true
-
-      iex> JsonLogic.apply(%{"in" => ["z", ["a", "b", "c"]]})
-      false
-
-      iex> JsonLogic.apply(%{"cat" => ["a", "b", "c"]})
-      "abc"
-
-      iex> JsonLogic.apply(%{"log" => "string"})
-      "string"
   """
 
   @falsey [0, "", [], nil, false]
 
-  @operations %{
-    "var" => :operation_var,
-    "missing" => :operation_missing,
-    "missing_some" => :operation_missing_some,
-    "if" => :operation_if,
-    "?:" => :operation_if,
-    "==" => :operation_similar,
-    "!=" => :operation_not_similar,
-    "===" => :operation_equal,
-    "!==" => :operation_not_equal,
-    "!" => :operation_not,
-    "!!" => :operation_not_not,
-    "or" => :operation_or,
-    "and" => :operation_and,
-    "<" => :operation_less_than,
-    ">" => :operation_greater_than,
-    "<=" => :operation_less_than_or_equal,
-    ">=" => :operation_greater_than_or_equal,
-    "max" => :operation_max,
-    "min" => :operation_min,
-    "+" => :operation_addition,
-    "-" => :operation_subtraction,
-    "*" => :operation_multiplication,
-    "/" => :operation_division,
-    "%" => :operation_remainder,
-    "map" => :operation_map,
-    "filter" => :operation_filter,
-    "reduce" => :operation_reduce,
-    "all" => :operation_all,
-    "none" => :operation_none,
-    "some" => :operation_some,
-    "merge" => :operation_merge,
-    "in" => :operation_in,
-    "cat" => :operation_cat,
-    "substr" => :operation_substr,
-    "log" => :operation_log,
-  }
-
   @doc """
-  Apply JsonLogic.
-  Accepts logic and data arguments as Map
-  Returns resolved result as Map
+  Resolves the JsonLogic. It accepts logic and data arguments as a map, and
+  returns the results as a map.
+
+  ## Examples
+
+  ```elixir
+  JsonLogic.resolve(nil)
+  #=> nil
+
+  JsonLogic.resolve(%{})
+  #=> %{}
+
+  JsonLogic.resolve(%{"var" => "key"}, %{"key" => "value"})
+  #=> "value"
+
+  JsonLogic.resolve(%{"var" => "nested.key"}, %{"nested" => %{"key" => "value"}})
+  #=> "value"
+
+  JsonLogic.resolve(%{"var" => ["none", "default"]}, %{"key" => "value"})
+  #=> "default"
+
+  JsonLogic.resolve(%{"var" => 0}, ~w{a b})
+  #=> "a"
+
+  JsonLogic.resolve(%{"==" => [1, 1]})
+  #=> true
+
+  JsonLogic.resolve(%{"==" => [0, 1]})
+  #=> false
+
+  JsonLogic.resolve(%{"!=" => [1, 1]})
+  #=> false
+
+  JsonLogic.resolve(%{"!=" => [0, 1]})
+  #=> true
+
+  JsonLogic.resolve(%{"===" => [1, 1]})
+  #=> true
+
+  JsonLogic.resolve(%{"===" => [1, 1.0]})
+  #=> false
+
+  JsonLogic.resolve(%{"===" => [1, %{"var" => "key"}]}, %{"key" => 1})
+  #=> true
+
+  JsonLogic.resolve(%{"!==" => [1, 1.0]})
+  #=> true
+
+  JsonLogic.resolve(%{"!==" => [1, 1]})
+  #=> false
+
+  JsonLogic.resolve(%{"!" => true})
+  #=> false
+
+  JsonLogic.resolve(%{"!" => false})
+  #=> true
+
+  JsonLogic.resolve(%{"if" => [true, "yes", "no" ]})
+  #=> "yes"
+
+  JsonLogic.resolve(%{"if" => [false, "yes", "no" ]})
+  #=> "no"
+
+  JsonLogic.resolve(%{"if" => [false, "unexpected", false, "unexpected", "default" ]})
+  #=> "default"
+
+  JsonLogic.resolve(%{"or" => [false, nil, "truthy"]})
+  #=> "truthy"
+
+  JsonLogic.resolve(%{"or" => ["first", "truthy"]})
+  #=> "first"
+
+  JsonLogic.resolve(%{"and" => [false, "falsy"]})
+  #=> false
+
+  JsonLogic.resolve(%{"and" => [true, 1, "truthy"]})
+  #=> "truthy"
+
+  JsonLogic.resolve(%{"max" => [1,2,3]})
+  #=> 3
+
+  JsonLogic.resolve(%{"min" => [1,2,3]})
+  #=> 1
+
+  JsonLogic.resolve(%{"<" => [0, 1]})
+  #=> true
+
+  JsonLogic.resolve(%{"<" => [1, 0]})
+  #=> false
+
+  JsonLogic.resolve(%{"<" => [0, 1, 2]})
+  #=> true
+
+  JsonLogic.resolve(%{"<" => [0, 2, 1]})
+  #=> false
+
+  JsonLogic.resolve(%{">" => [1, 0]})
+  #=> true
+
+  JsonLogic.resolve(%{">" => [0, 1]})
+  #=> false
+
+  JsonLogic.resolve(%{">" => [2, 1, 0]})
+  #=> true
+
+  JsonLogic.resolve(%{">" => [2, 0, 1]})
+  #=> false
+
+  JsonLogic.resolve(%{"<=" => [1, 1]})
+  #=> true
+
+  JsonLogic.resolve(%{"<=" => [1, 0]})
+  #=> false
+
+  JsonLogic.resolve(%{"<=" => [1, 1, 2]})
+  #=> true
+
+  JsonLogic.resolve(%{"<=" => [1, 0, 2]})
+  #=> false
+
+  JsonLogic.resolve(%{">=" => [1, 1]})
+  #=> true
+
+  JsonLogic.resolve(%{">=" => [0, 1]})
+  #=> false
+
+  JsonLogic.resolve(%{">=" => [1, 1, 0]})
+  #=> true
+
+  JsonLogic.resolve(%{">=" => [0, 1, 2]})
+  #=> false
+
+  JsonLogic.resolve(%{"+" => [1,2,3]})
+  #=> 6
+
+  JsonLogic.resolve(%{"+" => [2]})
+  #=> 2
+
+  JsonLogic.resolve(%{"-" => [7,4]})
+  #=> 3
+
+  JsonLogic.resolve(%{"-" => [2]})
+  #=> -2
+
+  JsonLogic.resolve(%{"*" => [2,3,4]})
+  #=> 24
+
+  JsonLogic.resolve(%{"/" => [5,2]})
+  #=> 2.5
+
+  JsonLogic.resolve(%{"%" => [7, 3]})
+  #=> 1
+
+  JsonLogic.resolve(%{"map" => [[1,2,3,4,5], %{"*" => [%{"var" => ""}, 2]}]})
+  #=> [2,4,6,8,10]
+
+  JsonLogic.resolve(%{"filter" => [[1,2,3,4,5], %{">" => [%{"var" => ""}, 2]}]})
+  #=> [3,4,5]
+
+  JsonLogic.resolve(%{"reduce" => [[1,2,3,4,5], %{"+" => [%{"var" => "current"}, %{"var" => "accumulator"}]}, 0]})
+  #=> 15
+
+  JsonLogic.resolve(%{"all" => [[1,2,3], %{">" => [%{"var" => ""}, 0]}]})
+  #=> true
+
+  JsonLogic.resolve(%{"all" => [[-1,2,3], %{">" => [%{"var" => ""}, 0]}]})
+  #=> false
+
+  JsonLogic.resolve(%{"none" => [[1,2,3], %{"<" => [%{"var" => ""}, 0 ]}]})
+  #=> true
+
+  JsonLogic.resolve(%{"none" => [[-1,2,3], %{"<" => [%{"var" => ""}, 0 ]}]})
+  #=> false
+
+  JsonLogic.resolve(%{"some" => [[-1,2,3], %{"<" => [%{"var" => ""}, 0 ]}]})
+  #=> true
+
+  JsonLogic.resolve(%{"some" => [[1,2,3], %{"<" => [%{"var" => ""}, 0 ]}]})
+  #=> false
+
+  JsonLogic.resolve(%{"in" => ["sub", "substring"]})
+  #=> true
+
+  JsonLogic.resolve(%{"in" => ["na", "substring"]})
+  #=> false
+
+  JsonLogic.resolve(%{"in" => ["a", ["a", "b", "c"]]})
+  #=> true
+
+  JsonLogic.resolve(%{"in" => ["z", ["a", "b", "c"]]})
+  #=> false
+
+  JsonLogic.resolve(%{"cat" => ["a", "b", "c"]})
+  #=> "abc"
+
+  JsonLogic.resolve(%{"log" => "string"})
+  #=> "string"
+  ```
   """
-  @spec apply(Map.t, Map.t) :: Map.t
-  def apply(logic, data \\ nil)
+  @spec resolve(map()) :: term()
+  @spec resolve(map(), map() | nil) :: term()
+  def resolve(logic, data \\ nil)
 
-  # operations selector branch of apply
-  def apply(logic, data) when is_map(logic) and logic != %{} do
-    operation_name = logic |> Map.keys |> List.first
-    values = logic |> Map.values |> List.first
-    case Map.fetch(@operations, operation_name) do
-      {:ok, value} -> Kernel.apply(__MODULE__, value, [values, data])
-      :error -> raise "Unrecognized operation `#{operation_name}`"
-    end
+  def resolve(logic, data) when map_size(logic) == 1 do
+    operation_name =
+      logic
+      |> Map.keys()
+      |> List.first()
 
+    values =
+      logic
+      |> Map.values()
+      |> List.first()
+
+    operation(operation_name, values, data)
   end
 
-  # conclusive branch of apply
-  def apply(logic, _) do
-    logic
+  def resolve(logic, data) when is_list(logic) do
+    operation("merge", logic, data)
   end
 
-  @doc false
-  def operation_var("", data) do
-    data
-  end
+  def resolve(logic, _) when map_size(logic) > 1,
+    do: raise(ArgumentError, "Invalid logic provided `#{inspect(logic)}`")
 
-  @doc false
-  def operation_var([path, default_key], data) do
-    operation_var(path, data) || JsonLogic.apply(default_key, data)
-  end
+  def resolve(logic, _), do: logic
 
-  @doc false
-  def operation_var([path], data) do
-    operation_var(path, data)
-  end
+  defp operation("and", [first], data), do: resolve(first, data)
 
-  @doc false
-  # TODO: may need refactoring
-  def operation_var(path, data) when not is_number(path) do
-    case JsonLogic.apply(path, data) do
-      string when is_binary(string) ->
-        string
-        |> String.split(".")
-        |> Enum.reduce(data, fn (key, acc) ->
-          cond do
-            is_nil(acc) -> nil
-            is_list(acc) ->
-              {index, _} = Integer.parse(key)
-              Enum.at(acc, index)
-            is_map(acc) -> Map.get(acc, key)
-            true -> nil
-          end
-        end)
-      _ -> data
+  defp operation("and", [first | rest], data) do
+    case resolve(first, data) do
+      resolved when resolved in @falsey ->
+        resolved
+
+      _resolved ->
+        operation("and", rest, data)
     end
   end
 
-  @doc false
-  def operation_var(index, data) when is_number(index) do
-    Enum.at(data, index)
-  end
+  defp operation("or", [first], data), do: resolve(first, data)
 
-  @doc false
-  def operation_missing(keys, data) when is_list(keys) and is_map(data) do
-    Enum.filter(keys, fn key ->
-      operation_var([key, :missing], data) == :missing
-    end)
-  end
+  defp operation("or", [first | others], data) do
+    case resolve(first, data) do
+      resolved when resolved in @falsey ->
+        operation("or", others, data)
 
-  def operation_missing(keys, _data) when is_list(keys) do
-    keys
-  end
-
-  def operation_missing(keys, data) do
-    case JsonLogic.apply(keys, data) do
-      list when is_list(list) ->
-        operation_missing(list, data)
-      elem ->
-        operation_missing([elem], data)
+      resolved ->
+        resolved
     end
   end
 
-  def operation_missing_some([min, keys], data) do
-    case operation_missing(keys, data) do
-      list when length(keys) - length(list) < min ->
-        list
-      _ -> []
-    end
-  end
+  defp operation("==", [left, right], data) do
+    {op1, op2} = cast_comparison_operator(resolve(left, data), resolve(right, data))
 
-  @doc false
-  def operation_similar([left, right], data \\ nil) do
-    {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
     op1 == op2
   end
 
-  @doc false
-  def operation_not_similar([left, right], data \\ nil) do
-    {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
+  defp operation("!=", [left, right], data) do
+    {op1, op2} = cast_comparison_operator(resolve(left, data), resolve(right, data))
+
     op1 != op2
   end
 
-  @doc false
-  def operation_equal([left, right], data \\ nil) do
-    JsonLogic.apply(left, data) === JsonLogic.apply(right, data)
+  defp operation("===", [left, right], data) do
+    resolve(left, data) === resolve(right, data)
   end
 
-  @doc false
-  def operation_not_equal([left, right], data \\ nil) do
-    JsonLogic.apply(left, data) !== JsonLogic.apply(right, data)
+  defp operation("!==", [left, right], data) do
+    resolve(left, data) !== resolve(right, data)
   end
 
-  @doc false
-  def operation_not_not([condition], data) do
-    case JsonLogic.apply(condition, data) do
-      value when value in @falsey -> false
+  defp operation("!!", [condition], data) do
+    case resolve(condition, data) do
+      resolved when resolved in @falsey -> false
       _truthy -> true
     end
   end
 
-  def operation_not_not(condition, data) do
-    operation_not_not([condition], data)
+  defp operation("!!", condition, data) do
+    operation("!!", [condition], data)
   end
 
-  @doc false
-  def operation_not(condition, data) do
-    !operation_not_not(condition, data)
+  defp operation("!", condition, data) do
+    !operation("!!", condition, data)
   end
 
-  @doc false
-  def operation_if([], _data) do
-    nil
-  end
+  defp operation("max", [], _data), do: nil
 
-  def operation_if([last], data) do
-    JsonLogic.apply(last, data)
-  end
+  defp operation("max", list, data) when is_list(list) do
+    # When reducing the list of resolved json logic, we need to try to coerce it
+    # to a numeric value in order to find the largest number, but we need to
+    # ensure we return the resolved value, and not the coerced numeric value.
+    list
+    |> Enum.reduce_while([], fn element, acc ->
+      case resolve(element, data) do
+        resolved when is_number(resolved) ->
+          {:cont, [{resolved, resolved} | acc]}
 
-  @doc false
-  def operation_if([condition, yes], data) do
-    case JsonLogic.apply(condition, data) do
-      value when value in @falsey -> nil
-      _ -> JsonLogic.apply(yes, data)
+        resolved when is_binary(resolved) ->
+          if numeric_string?(resolved) do
+            {:ok, parsed} = parse_number(resolved)
+            {:cont, [{resolved, parsed} | acc]}
+          else
+            {:halt, nil}
+          end
+      end
+    end)
+    |> case do
+      nil ->
+        nil
+
+      otherwise ->
+        otherwise
+        |> Enum.max_by(fn {_, num} -> num end)
+        |> then(fn {resolved, _} -> resolved end)
     end
   end
 
-  @doc false
-  def operation_if([condition, yes, no], data) do
-    case JsonLogic.apply(condition, data) do
-      value when value in @falsey -> JsonLogic.apply(no, data)
-      _ -> JsonLogic.apply(yes, data)
+  defp operation("min", [], _data), do: nil
+
+  defp operation("min", list, data) when is_list(list) do
+    # When reducing the list of resolved json logic, we need to try to coerce it
+    # to a numeric value in order to find the smallest number, but we need to
+    # ensure we return the resolved value, and not the coerced numeric value.
+    list
+    |> Enum.reduce_while([], fn element, acc ->
+      case resolve(element, data) do
+        resolved when is_number(resolved) ->
+          {:cont, [{resolved, resolved} | acc]}
+
+        resolved when is_binary(resolved) ->
+          if numeric_string?(resolved) do
+            {:ok, parsed} = parse_number(resolved)
+            {:cont, [{resolved, parsed} | acc]}
+          else
+            {:halt, nil}
+          end
+      end
+    end)
+    |> case do
+      nil ->
+        nil
+
+      otherwise ->
+        otherwise
+        |> Enum.min_by(fn {_, num} -> num end)
+        |> then(fn {resolved, _} -> resolved end)
     end
   end
 
-  @doc false
-  def operation_if([condition, yes | others], data) do
-    case JsonLogic.apply(condition, data) do
-      value when value in @falsey -> operation_if(others, data)
-      _ -> JsonLogic.apply(yes, data)
+  defp operation("?:", logic, data), do: operation("if", logic, data)
+
+  defp operation("if", [], _data), do: nil
+  defp operation("if", [last], data), do: resolve(last, data)
+
+  defp operation("if", [condition, yes], data) do
+    case resolve(condition, data) do
+      resolved when resolved in @falsey ->
+        nil
+
+      _resolved ->
+        resolve(yes, data)
     end
   end
 
-  @doc false
-  def operation_or([first], data) do
-    JsonLogic.apply(first, data)
-  end
+  defp operation("if", [condition, yes, no], data) do
+    case resolve(condition, data) do
+      resolved when resolved in @falsey ->
+        resolve(no, data)
 
-  def operation_or([first | others], data) do
-    case JsonLogic.apply(first, data) do
-      value when value in @falsey -> operation_or(others, data)
-      other -> other
+      _resolved ->
+        resolve(yes, data)
     end
   end
 
-  @doc false
-  def operation_and([first], data) do
-    JsonLogic.apply(first, data)
-  end
+  defp operation("if", [condition, yes | others], data) do
+    case resolve(condition, data) do
+      resolved when resolved in @falsey ->
+        operation("if", others, data)
 
-  def operation_and([first | others], data) do
-    case JsonLogic.apply(first, data) do
-      value when value in @falsey -> value
-      _truthy -> operation_and(others, data)
+      _resolved ->
+        resolve(yes, data)
     end
   end
 
-  @doc false
-  def operation_max(list, data) do
-    list |> Enum.map(fn(x) -> JsonLogic.apply(x, data) end) |> Enum.max
+  defp operation("missing", keys, data) when is_list(keys) and is_map(data) do
+    Enum.filter(keys, &(operation("var", [&1, :missing], data) == :missing))
   end
 
-  @doc false
-  def operation_min(list, data) do
-    list |> Enum.map(fn(x) -> JsonLogic.apply(x, data) end) |> Enum.min
+  defp operation("missing", keys, _data) when is_list(keys), do: keys
+
+  defp operation("missing", keys, data) do
+    case resolve(keys, data) do
+      resolved when is_list(resolved) ->
+        operation("missing", resolved, data)
+
+      resolved ->
+        operation("missing", [resolved], data)
+    end
   end
 
-  @doc false
-  def operation_less_than([left, right], data) do
-    {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
-    op1 < op2
+  defp operation("missing_some", [min, keys], data) do
+    case operation("missing", keys, data) do
+      list when length(keys) - length(list) < min ->
+        list
+
+      _otherwise ->
+        []
+    end
   end
 
-  @doc false
-  def operation_less_than([left, middle, right | _], data) do
-    operation_less_than([left, middle], data) &&
-    operation_less_than([middle, right], data)
+  defp operation("<", [left, right], data) do
+    case cast_comparison_operator(resolve(left, data), resolve(right, data)) do
+      {nil, nil} -> true
+      {nil, _op2} -> false
+      {_op1, nil} -> false
+      {op1, op2} -> op1 < op2
+    end
   end
 
-  @doc false
-  def operation_greater_than([left, right], data) do
-    !operation_less_than_or_equal([left, right], data)
+  defp operation("<", [left, middle, right | _], data) do
+    operation("<", [left, middle], data) &&
+      operation("<", [middle, right], data)
   end
 
-  @doc false
-  def operation_greater_than([left, middle, right | _], data) do
-    operation_greater_than([left, middle], data) &&
-    operation_greater_than([middle, right], data)
+  defp operation("<=", [left, right], data) do
+    case cast_comparison_operator(resolve(left, data), resolve(right, data)) do
+      {nil, nil} -> true
+      {nil, _op2} -> false
+      {_op1, nil} -> false
+      {op1, op2} -> op1 <= op2
+    end
   end
 
-  @doc false
-  def operation_less_than_or_equal([left, right], data) do
-    {op1, op2} = cast_comparison_operator JsonLogic.apply(left, data), JsonLogic.apply(right, data)
-    op1 <= op2
+  defp operation("<=", [left, middle, right | _], data) do
+    operation("<=", [left, middle], data) &&
+      operation("<=", [middle, right], data)
   end
 
-  @doc false
-  def operation_less_than_or_equal([left, middle, right | _], data) do
-    operation_less_than_or_equal([left, middle], data) &&
-    operation_less_than_or_equal([middle, right], data)
+  defp operation(">", [left, right], data) do
+    case cast_comparison_operator(resolve(left, data), resolve(right, data)) do
+      {nil, nil} -> true
+      {nil, _op2} -> false
+      {_op1, nil} -> false
+      {op1, op2} -> op1 > op2
+    end
   end
 
-  @doc false
-  def operation_greater_than_or_equal([left, right], data) do
-    !operation_less_than([left, right], data)
+  defp operation(">", [left, middle, right | _], data) do
+    operation(">", [left, middle], data) &&
+      operation(">", [middle, right], data)
   end
 
-  @doc false
-  def operation_greater_than_or_equal([left, middle, right | _], data) do
-    operation_greater_than_or_equal([left, middle], data) &&
-    operation_greater_than_or_equal([middle, right], data)
+  defp operation(">=", [left, right], data) do
+    case cast_comparison_operator(resolve(left, data), resolve(right, data)) do
+      {nil, nil} -> true
+      {nil, _op2} -> false
+      {_op1, nil} -> false
+      {op1, op2} -> op1 >= op2
+    end
   end
 
-  @doc false
-  def operation_addition(numbers, data) when is_list(numbers) do
+  defp operation(">=", [left, middle, right | _], data) do
+    operation(">=", [left, middle], data) &&
+      operation(">=", [middle, right], data)
+  end
+
+  defp operation("+", [], _data), do: 0
+
+  defp operation("+", numbers, data) when is_list(numbers) do
     numbers
-    |> Enum.map(&JsonLogic.apply(&1, data))
+    |> Enum.map(&resolve(&1, data))
     |> Enum.reduce(0, fn
       str, total when is_binary(str) ->
-        if String.match?(str, ~r/\./) do
-          {num, _} = Float.parse(str)
-          total + num
-        else
-          {num, _} = Integer.parse(str)
-          total + num
-        end
+        {:ok, num} = parse_number(str)
+        total + num
+
       num, total ->
         total + num
     end)
   end
 
-    def operation_addition(numbers, data) do
-      operation_addition([numbers], data)
-    end
+  defp operation("+", numbers, data), do: operation("+", [numbers], data)
 
+  defp operation("-", [], _data), do: nil
 
-  @doc false
-  def operation_subtraction([first, last], data) do
-    {op1, op2} = cast_comparison_operator(JsonLogic.apply(first, data), JsonLogic.apply(last, data))
+  defp operation("-", [first, last], data) do
+    {op1, op2} = cast_comparison_operator(resolve(first, data), resolve(last, data))
+
     op1 - op2
   end
 
-  @doc false
-  def operation_subtraction([first], data) do
-    -JsonLogic.apply(first, data)
+  defp operation("-", [first], data) do
+    case resolve(first, data) do
+      resolved when is_number(resolved) ->
+        -resolved
+
+      resolved ->
+        if numeric_string?(resolved) do
+          {:ok, parsed} = parse_number(resolved)
+          -parsed
+        else
+          raise ArgumentError, "Unsupported operation `-` for `#{first}`"
+        end
+    end
   end
 
-  @doc false
-  def operation_multiplication(numbers, data) do
+  defp operation("*", numbers, data) do
     numbers
-    |> Enum.map(&JsonLogic.apply(&1, data))
+    |> Enum.map(&resolve(&1, data))
     |> Enum.reduce(1, fn
       str, total when is_binary(str) ->
         if String.match?(str, ~r/\./) do
@@ -528,153 +524,242 @@ defmodule JsonLogic do
           {num, _} = Integer.parse(str)
           total * num
         end
-      num, total -> total * num
+
+      num, total ->
+        total * num
     end)
   end
 
-  @doc false
-  def operation_division([first, last], data) do
-    {op1, op2} = cast_comparison_operator(JsonLogic.apply(first, data), JsonLogic.apply(last, data))
+  defp operation("/", [first, last], data) do
+    {op1, op2} = cast_comparison_operator(resolve(first, data), resolve(last, data))
+
     op1 / op2
   end
 
-  @doc false
-  def operation_remainder([first, last], data) do
-    Kernel.rem(JsonLogic.apply(first, data), JsonLogic.apply(last, data))
+  defp operation("%", [first, last], data) do
+    Kernel.rem(resolve(first, data), resolve(last, data))
   end
 
-  @doc false
-  def operation_map([list, map_action], data) do
-    case JsonLogic.apply(list, data) do
-      list when is_list(list) ->
-        Enum.map(list, fn(item) -> JsonLogic.apply(map_action, item) end)
-      _ -> []
+  defp operation("map", [list, map_action], data) do
+    case resolve(list, data) do
+      resolved when is_list(resolved) ->
+        Enum.map(resolved, &resolve(map_action, &1))
+
+      _resolved ->
+        []
     end
   end
 
-  @doc false
-  def operation_filter([list, filter_action], data) do
-    JsonLogic.apply(list, data)
-    |> Enum.filter(fn(item) ->
-      operation_not_not(filter_action, item)
-    end)
+  defp operation("filter", [list, filter_action], data) do
+    list
+    |> resolve(data)
+    |> Enum.filter(&operation("!!", filter_action, &1))
   end
 
-  @doc false
-  def operation_reduce([list, reduce_action], data) do
-    operation_reduce([list, reduce_action, nil], data)
+  defp operation("reduce", [list, reduce_action], data) do
+    operation("reduce", [list, reduce_action, nil], data)
   end
 
-  def operation_reduce([list, reduce_action, first], data) do
-    eval_first = JsonLogic.apply(first, data)
-    case JsonLogic.apply(list, data) do
-      list when is_list(list) ->
-        Enum.reduce(list, eval_first, fn(item, accumulator) ->
-          JsonLogic.apply(reduce_action, %{"current" => item, "accumulator" => accumulator})
+  defp operation("reduce", [list, reduce_action, first], data) do
+    first_resolved = resolve(first, data)
+
+    case resolve(list, data) do
+      resolved when is_list(resolved) ->
+        Enum.reduce(resolved, first_resolved, fn item, accumulator ->
+          resolve(reduce_action, %{"current" => item, "accumulator" => accumulator})
         end)
-      _ -> first
+
+      _resolved ->
+        first
     end
   end
 
-  @doc false
-  def operation_all([list, test], data) do
-    case JsonLogic.apply(list, data) do
-      [] -> false
-      list when is_list(list) -> Enum.all?(list, fn(item) -> JsonLogic.apply(test, item) end)
-      _ -> false
+  defp operation("all", [list, test], data) do
+    case resolve(list, data) do
+      [] ->
+        false
+
+      resolved when is_list(resolved) ->
+        Enum.all?(resolved, &resolve(test, &1))
+
+      _resolved ->
+        false
     end
   end
 
-  @doc false
-  def operation_none([list, test], data) do
-    JsonLogic.apply(list, data)
-    |> Enum.all?(fn(item) -> Kernel.if(JsonLogic.apply(test, item), do: false, else: true) end)
+  defp operation("none", [list, test], data) do
+    list
+    |> resolve(data)
+    |> Enum.all?(fn item -> Kernel.if(resolve(test, item), do: false, else: true) end)
   end
 
-  @doc false
-  def operation_some([list, test], data) do
-    JsonLogic.apply(list, data)
-    |> Enum.any?(fn(item) -> JsonLogic.apply(test, item) end)
+  defp operation("some", [list, test], data) do
+    list
+    |> resolve(data)
+    |> Enum.any?(&resolve(test, &1))
   end
 
-  def operation_merge([], _data), do: []
+  defp operation("merge", [], _data), do: []
 
-  def operation_merge([elem | rest], data) do
-    case JsonLogic.apply(elem, data) do
+  defp operation("merge", [element | rest], data) do
+    case resolve(element, data) do
       list when is_list(list) ->
-        list ++ operation_merge(rest, data)
-      elem ->
-        [elem | operation_merge(rest, data)]
+        list ++ operation("merge", rest, data)
+
+      element ->
+        [element | operation("merge", rest, data)]
     end
   end
 
-  def operation_merge(elem, data) do
-    [JsonLogic.apply(elem, data)]
+  defp operation("merge", element, data), do: [resolve(element, data)]
+
+  defp operation("in", [member, list], data) when is_list(list) do
+    list
+    |> Enum.map(&resolve(&1, data))
+    |> Enum.member?(resolve(member, data))
   end
 
-  @doc false
-  def operation_in([member, list], data) when is_list(list) do
-    members = list |> Enum.map(fn(m) -> JsonLogic.apply(m, data) end)
-    Enum.member?(members, JsonLogic.apply(member, data))
+  defp operation("in", [substring, string], data) when is_binary(string) do
+    String.contains?(string, resolve(substring, data))
   end
 
-  @doc false
-  def operation_in([substring, string], data) when is_binary(string) do
-    String.contains?(string, JsonLogic.apply(substring, data))
+  defp operation("in", [_, nil], _), do: false
+
+  defp operation("in", [member, list], _) when not is_map(list) do
+    raise ArgumentError, "Cannot apply `in` to non-enumerable: `#{inspect([member, list])}`"
   end
 
-  @doc false
-  def operation_in([_, from], _) when is_nil(from) do
-    false
+  defp operation("in", [find, from], data) do
+    operation("in", [resolve(find, data), resolve(from, data)], data)
   end
 
-  @doc false
-  def operation_in([find, from], data) do
-    operation_in([JsonLogic.apply(find, data), JsonLogic.apply(from, data)], data)
+  defp operation("cat", list, data) when is_list(list) do
+    Enum.map_join(list, "", &resolve(&1, data))
   end
 
-  @doc false
-  def operation_cat(strings, data) when is_list(strings) do
-    strings |> Enum.map(fn(s) -> JsonLogic.apply(s, data) end) |> Enum.join
-  end
-
-  def operation_cat(string, data)  do
-    JsonLogic.apply(string, data) |> to_string
-  end
-
-  @doc false
-  def operation_substr([string, offset], data)  do
+  defp operation("cat", string, data) do
     string
-    |> JsonLogic.apply(data)
+    |> resolve(data)
+    |> to_string()
+  end
+
+  defp operation("substr", [string, offset], data) do
+    string
+    |> resolve(data)
     |> String.slice(offset..-1)
   end
 
-  def operation_substr([string, offset, length], data) when length >= 0 do
+  defp operation("substr", [string, offset, length], data) when length >= 0 do
     string
-    |> JsonLogic.apply(data)
+    |> resolve(data)
     |> String.slice(offset, length)
   end
 
-  def operation_substr([string, offset, length], data) do
+  defp operation("substr", [string, offset, length], data) do
     string
-    |> JsonLogic.apply(data)
+    |> resolve(data)
     |> String.slice(offset..(length - 1))
   end
 
-  @doc false
-  def operation_log(logic, data) do
-    JsonLogic.apply(logic, data)
+  defp operation("var", "", data), do: data
+
+  defp operation("var", [path, default_key], data) do
+    operation("var", path, data) || resolve(default_key, data)
   end
 
-  defp cast_comparison_operator(op1, op2) when is_number(op1) and is_binary(op2) do
-    {num_op2, _} = Float.parse(op2)
-    {op1, num_op2}
+  defp operation("var", [path], data) do
+    operation("var", path, data)
   end
 
-  defp cast_comparison_operator(op1, op2) when is_binary(op1) and is_number(op2) do
-    {num_op1, _} = Float.parse(op1)
-    {num_op1, op2}
+  defp operation("var", path, data) when not is_number(path) do
+    case resolve(path, data) do
+      string when is_binary(string) ->
+        string
+        |> String.split(".")
+        |> Enum.reduce(data, fn
+          _key, nil ->
+            nil
+
+          key, acc when is_list(acc) ->
+            {index, _} = Integer.parse(key)
+            Enum.at(acc, index)
+
+          key, acc when is_map(acc) ->
+            Map.get(acc, key)
+
+          _key, _acc ->
+            nil
+        end)
+
+      _otherwise ->
+        data
+    end
   end
 
-  defp cast_comparison_operator(op1, op2), do: {op1, op2}
+  defp operation("var", index, data) when is_number(index) do
+    Enum.at(data, index)
+  end
+
+  defp operation("log", logic, data), do: resolve(logic, data)
+
+  defp operation(name, _logic, _data),
+    do: raise(ArgumentError, "Unrecognized operation `#{name}`")
+
+  defp cast_comparison_operator(left, right) when is_number(left) and is_binary(right) do
+    case parse_number(right) do
+      {:ok, parsed} ->
+        {left, parsed}
+
+      _ ->
+        raise ArgumentError, "Unable to parse number `#{right}`"
+    end
+  end
+
+  defp cast_comparison_operator(left, right) when is_binary(left) and is_number(right) do
+    case parse_number(left) do
+      {:ok, parsed} ->
+        {parsed, right}
+
+      _ ->
+        raise ArgumentError, "Unable to parse number `#{left}`"
+    end
+  end
+
+  defp cast_comparison_operator(left, right) when is_binary(left) and is_binary(right) do
+    if numeric_string?(left) and numeric_string?(right) do
+      with {:ok, left} <- parse_number(left),
+           {:ok, right} <- parse_number(right) do
+        {left, right}
+      else
+        :error ->
+          raise ArgumentError, "Unsupported numeric values `#{left}` and `#{right}`"
+      end
+    else
+      {left, right}
+    end
+  end
+
+  defp cast_comparison_operator(left, right), do: {left, right}
+
+  @numeric_regex ~r/^[\+-]?(\d+)((\.(\d+)([eE][\-\+]?(\d+))?))?$/
+  defp numeric_string?(value), do: String.match?(value, @numeric_regex)
+
+  defp parse_number(value) do
+    case Integer.parse(value) do
+      {integer, ""} ->
+        {:ok, integer}
+
+      _ ->
+        case Float.parse(value) do
+          {float, ""} ->
+            {:ok, float}
+
+          {float, "."} ->
+            {:ok, float}
+
+          _ ->
+            :error
+        end
+    end
+  end
 end

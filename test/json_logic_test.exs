@@ -54,119 +54,244 @@ defmodule JsonLogicTest do
   describe "==" do
     test "nested true" do
       logic = %{"==" => [true, %{"==" => [1, 1]}]}
-      assert JsonLogic.resolve(logic) == true
+      assert JsonLogic.resolve(logic)
     end
 
     test "nested false" do
       logic = %{"==" => [false, %{"==" => [0, 1]}]}
-      assert JsonLogic.resolve(logic) == true
+      assert JsonLogic.resolve(logic)
     end
 
-    test "specification" do
-      assert JsonLogic.resolve(%{"==" => [1, 1]}) == true
-      assert JsonLogic.resolve(%{"==" => [1, "1"]}) == true
-      assert JsonLogic.resolve(%{"==" => ["1", "1"]}) == true
-      assert JsonLogic.resolve(%{"==" => ["1", 1]}) == true
+    test "integer, float, and decimal comparisons" do
+      ones = [Decimal.new("1.0"), "1.0", "1", 1.0, 1]
+      twos = [Decimal.new("2.0"), "2.0", "2", 2.0, 2]
 
-      assert JsonLogic.resolve(%{"==" => [1, 2]}) == false
-      assert JsonLogic.resolve(%{"==" => [1, "2"]}) == false
-      assert JsonLogic.resolve(%{"==" => ["1", "2"]}) == false
-      assert JsonLogic.resolve(%{"==" => ["1", 2]}) == false
+      for left <- ones, right <- ones do
+        assert JsonLogic.resolve(%{"==" => [left, right]})
+      end
+
+      for left <- twos, right <- ones do
+        refute JsonLogic.resolve(%{"==" => [left, right]})
+      end
+
+      for left <- ones, right <- twos do
+        refute JsonLogic.resolve(%{"==" => [left, right]})
+      end
+
+      for left <- ones, right <- ones do
+        logic = %{"==" => [%{"var" => "left"}, %{"var" => "right"}]}
+        assert JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
+
+      for left <- twos, right <- ones do
+        logic = %{"==" => [%{"var" => "left"}, %{"var" => "right"}]}
+        refute JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
+
+      for left <- ones, right <- twos do
+        logic = %{"==" => [%{"var" => "left"}, %{"var" => "right"}]}
+        refute JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
+
+      assert JsonLogic.resolve(%{"==" => [3.14, 1.0 + 2.14]})
+      refute JsonLogic.resolve(%{"==" => [3.14, 3.1399999999999997]})
     end
   end
 
   describe "!=" do
     test "nested true" do
-      logic = %{"!=" => [false, %{"!=" => [0, 1]}]}
-      assert JsonLogic.resolve(logic) == true
+      assert JsonLogic.resolve(%{"!=" => [false, %{"!=" => [0, 1]}]})
     end
 
     test "nested false" do
-      logic = %{"!=" => [true, %{"!=" => [1, 1]}]}
-      assert JsonLogic.resolve(logic) == true
+      assert JsonLogic.resolve(%{"!=" => [true, %{"!=" => [1, 1]}]})
     end
 
-    test "specification" do
-      assert JsonLogic.resolve(%{"!=" => [1, 1]}) == false
-      assert JsonLogic.resolve(%{"!=" => [1, 2]}) == true
-      assert JsonLogic.resolve(%{"!=" => [1, "1"]}) == false
-      assert JsonLogic.resolve(%{"!=" => ["1", "1"]}) == false
-      assert JsonLogic.resolve(%{"!=" => ["1", 1]}) == false
+    test "integer, float, and decimal comparisons" do
+      ones = [Decimal.new("1.0"), "1.0", "1", 1.0, 1]
+      twos = [Decimal.new("2.0"), "2.0", "2", 2.0, 2]
+
+      for left <- ones, right <- ones do
+        refute JsonLogic.resolve(%{"!=" => [left, right]})
+      end
+
+      for left <- twos, right <- ones do
+        assert JsonLogic.resolve(%{"!=" => [left, right]})
+      end
+
+      for left <- ones, right <- twos do
+        assert JsonLogic.resolve(%{"!=" => [left, right]})
+      end
+
+      for left <- ones, right <- ones do
+        logic = %{"!=" => [%{"var" => "left"}, %{"var" => "right"}]}
+        refute JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
+
+      for left <- twos, right <- ones do
+        logic = %{"!=" => [%{"var" => "left"}, %{"var" => "right"}]}
+        assert JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
+
+      for left <- ones, right <- twos do
+        logic = %{"!=" => [%{"var" => "left"}, %{"var" => "right"}]}
+        assert JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
+
+      refute JsonLogic.resolve(%{"!=" => [3.14, 1.0 + 2.14]})
+      assert JsonLogic.resolve(%{"!=" => [3.14, 3.1399999999999997]})
     end
   end
 
   describe "===" do
     test "nested true" do
-      logic = %{"===" => [true, %{"===" => [1, 1]}]}
-      assert JsonLogic.resolve(logic)
+      assert JsonLogic.resolve(%{"===" => [true, %{"===" => [1, 1]}]})
     end
 
     test "nested false" do
-      logic = %{"===" => [false, %{"===" => [1, 1.0]}]}
-      assert JsonLogic.resolve(logic) == true
+      assert JsonLogic.resolve(%{"===" => [false, %{"===" => [1, 1.0]}]})
     end
 
-    test "specification" do
-      assert JsonLogic.resolve(%{"===" => [1, 1]}) == true
-      assert JsonLogic.resolve(%{"===" => [1, "1"]}) == false
-      assert JsonLogic.resolve(%{"===" => ["1", "1"]}) == true
-      assert JsonLogic.resolve(%{"===" => ["1", 1]}) == false
+    test "integer comparisons" do
+      assert JsonLogic.resolve(%{"===" => [1, 1]})
+      refute JsonLogic.resolve(%{"===" => [1, "1"]})
+      assert JsonLogic.resolve(%{"===" => ["1", "1"]})
+      refute JsonLogic.resolve(%{"===" => ["1", 1]})
 
-      assert JsonLogic.resolve(%{"===" => [1, 2]}) == false
-      assert JsonLogic.resolve(%{"===" => [1, "2"]}) == false
-      assert JsonLogic.resolve(%{"===" => ["1", "2"]}) == false
-      assert JsonLogic.resolve(%{"===" => ["1", 2]}) == false
+      refute JsonLogic.resolve(%{"===" => [1, 2]})
+      refute JsonLogic.resolve(%{"===" => [1, "2"]})
+      refute JsonLogic.resolve(%{"===" => ["1", "2"]})
+      refute JsonLogic.resolve(%{"===" => ["1", 2]})
+    end
+
+    test "float comparisons" do
+      assert JsonLogic.resolve(%{"===" => [1.0, 1.0]})
+      refute JsonLogic.resolve(%{"===" => [1.0, "1.0"]})
+      assert JsonLogic.resolve(%{"===" => ["1.0", "1.0"]})
+      refute JsonLogic.resolve(%{"===" => ["1.0", 1.0]})
+
+      refute JsonLogic.resolve(%{"===" => [1.0, 2.0]})
+      refute JsonLogic.resolve(%{"===" => [1.0, "2.0"]})
+      refute JsonLogic.resolve(%{"===" => ["1.0", "2.0"]})
+      refute JsonLogic.resolve(%{"===" => ["1.0", 2.0]})
+    end
+
+    test "decimal comparisons" do
+      refute JsonLogic.resolve(%{"===" => ["1.0", Decimal.new("1.0")]})
+      refute JsonLogic.resolve(%{"===" => [1.0, Decimal.new("1.0")]})
+      refute JsonLogic.resolve(%{"===" => [1, Decimal.new("1.0")]})
+      refute JsonLogic.resolve(%{"===" => [1, Decimal.new("1")]})
+      refute JsonLogic.resolve(%{"===" => [Decimal.new("1.0"), "1.0"]})
+      refute JsonLogic.resolve(%{"===" => [Decimal.new("1.0"), 1.0]})
+      refute JsonLogic.resolve(%{"===" => [Decimal.new("1.0"), 1]})
+      refute JsonLogic.resolve(%{"===" => [Decimal.new("1"), 1]})
+
+      assert JsonLogic.resolve(%{"===" => [Decimal.new("1.0"), Decimal.new("1.0")]})
+      refute JsonLogic.resolve(%{"===" => [Decimal.new("1.00"), Decimal.new("1.0")]})
+      refute JsonLogic.resolve(%{"===" => [Decimal.new("1.0"), Decimal.new("1.00")]})
     end
   end
 
   describe "!==" do
     test "nested true" do
-      logic = %{"!==" => [false, %{"!==" => [1, 1.0]}]}
-      assert JsonLogic.resolve(logic) == true
+      assert JsonLogic.resolve(%{"!==" => [false, %{"!==" => [1, 1.0]}]})
     end
 
     test "nested false" do
-      logic = %{"!==" => [true, %{"!==" => [1, 1]}]}
-      assert JsonLogic.resolve(logic) == true
+      assert JsonLogic.resolve(%{"!==" => [true, %{"!==" => [1, 1]}]})
     end
 
-    test "specification" do
-      assert JsonLogic.resolve(%{"!==" => [1, 1]}) == false
-      assert JsonLogic.resolve(%{"!==" => [1, 2]}) == true
-      assert JsonLogic.resolve(%{"!==" => [1, "1"]}) == true
-      assert JsonLogic.resolve(%{"!==" => ["1", "1"]}) == false
-      assert JsonLogic.resolve(%{"!==" => ["1", 1]}) == true
+    test "integer comparisons" do
+      refute JsonLogic.resolve(%{"!==" => [1, 1]})
+      assert JsonLogic.resolve(%{"!==" => [1, 2]})
+      assert JsonLogic.resolve(%{"!==" => [1, "1"]})
+      refute JsonLogic.resolve(%{"!==" => ["1", "1"]})
+      assert JsonLogic.resolve(%{"!==" => ["1", 1]})
+    end
+
+    test "float comparisons" do
+      refute JsonLogic.resolve(%{"!==" => [1.0, 1.0]})
+      assert JsonLogic.resolve(%{"!==" => [1.0, 2.0]})
+      assert JsonLogic.resolve(%{"!==" => [1.0, "1.0"]})
+      refute JsonLogic.resolve(%{"!==" => ["1.0", "1.0"]})
+      assert JsonLogic.resolve(%{"!==" => ["1.0", 1.0]})
+    end
+
+    test "decimal comparisons" do
+      assert JsonLogic.resolve(%{"!==" => ["1.0", Decimal.new("1.0")]})
+      assert JsonLogic.resolve(%{"!==" => [1.0, Decimal.new("1.0")]})
+      assert JsonLogic.resolve(%{"!==" => [1, Decimal.new("1.0")]})
+      assert JsonLogic.resolve(%{"!==" => [1, Decimal.new("1")]})
+      assert JsonLogic.resolve(%{"!==" => [Decimal.new("1.0"), "1.0"]})
+      assert JsonLogic.resolve(%{"!==" => [Decimal.new("1.0"), 1.0]})
+      assert JsonLogic.resolve(%{"!==" => [Decimal.new("1.0"), 1]})
+      assert JsonLogic.resolve(%{"!==" => [Decimal.new("1"), 1]})
+
+      refute JsonLogic.resolve(%{"!==" => [Decimal.new("1.0"), Decimal.new("1.0")]})
+      assert JsonLogic.resolve(%{"!==" => [Decimal.new("1.00"), Decimal.new("1.0")]})
+      assert JsonLogic.resolve(%{"!==" => [Decimal.new("1.0"), Decimal.new("1.00")]})
     end
   end
 
   describe "!" do
     test "returns true with [false]" do
-      assert JsonLogic.resolve(%{"!" => [false]}) == true
+      assert JsonLogic.resolve(%{"!" => [false]})
     end
 
     test "returns false with [true]" do
-      assert JsonLogic.resolve(%{"!" => [true]}) == false
+      refute JsonLogic.resolve(%{"!" => [true]})
     end
 
     test "returns true with [false] from data" do
       logic = %{"!" => [%{"var" => "key"}]}
       data = %{"key" => false}
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
     end
 
-    test "specification" do
-      assert JsonLogic.resolve(%{"!" => [false]}) == true
-      assert JsonLogic.resolve(%{"!" => false}) == true
+    test "notting boolean" do
+      assert JsonLogic.resolve(%{"!" => [false]})
+      assert JsonLogic.resolve(%{"!" => false})
+      refute JsonLogic.resolve(%{"!" => [true]})
+      refute JsonLogic.resolve(%{"!" => true})
+    end
 
-      assert JsonLogic.resolve(%{"!" => nil}) == true
+    test "notting nil" do
+      assert JsonLogic.resolve(%{"!" => nil})
+      assert JsonLogic.resolve(%{"!" => [nil]})
+      refute JsonLogic.resolve(%{"!" => [nil, nil]})
+    end
 
-      assert JsonLogic.resolve(%{"!" => [true]}) == false
-      assert JsonLogic.resolve(%{"!" => true}) == false
+    test "notting numbers" do
+      assert JsonLogic.resolve(%{"!" => 0})
+      refute JsonLogic.resolve(%{"!" => 1})
+      refute JsonLogic.resolve(%{"!" => -1})
+      refute JsonLogic.resolve(%{"!" => 100})
+      refute JsonLogic.resolve(%{"!" => 0.0})
+      refute JsonLogic.resolve(%{"!" => 1.0})
+      refute JsonLogic.resolve(%{"!" => -1.0})
+      refute JsonLogic.resolve(%{"!" => Decimal.new("1.0")})
+    end
 
-      assert JsonLogic.resolve(%{"!" => 0}) == true
-      assert JsonLogic.resolve(%{"!" => 1}) == false
-      assert JsonLogic.resolve(%{"!" => -1}) == false
-      assert JsonLogic.resolve(%{"!" => 100}) == false
+    test "notting vars" do
+      logic = %{"!" => [%{"var" => "foo"}]}
+      data = %{"foo" => 0}
+      assert JsonLogic.resolve(logic, data)
+
+      logic = %{"!" => [%{"var" => "foo"}]}
+      data = %{"foo" => 1}
+      refute JsonLogic.resolve(logic, data)
+
+      logic = %{"!" => [%{"var" => "foo"}]}
+      data = %{"foo" => 1.0}
+      refute JsonLogic.resolve(logic, data)
+
+      logic = %{"!" => [%{"var" => "foo"}]}
+      data = %{"foo" => 0.0}
+      refute JsonLogic.resolve(logic, data)
+
+      logic = %{"!" => [%{"var" => "foo"}]}
+      data = %{"foo" => Decimal.new("1.0")}
+      refute JsonLogic.resolve(logic, data)
     end
   end
 
@@ -345,7 +470,7 @@ defmodule JsonLogicTest do
       assert JsonLogic.resolve(logic, data) == 3
     end
 
-    test "specification" do
+    test "integers" do
       assert JsonLogic.resolve(%{"max" => [1, 2, 3]}) == 3
       assert JsonLogic.resolve(%{"max" => [1, 3, 3]}) == 3
       assert JsonLogic.resolve(%{"max" => [3, 2, 1]}) == 3
@@ -362,26 +487,43 @@ defmodule JsonLogicTest do
       assert JsonLogic.resolve(%{"max" => [3, "2", "1"]}) == 3
       assert JsonLogic.resolve(%{"max" => [3, "2"]}) == 3
       assert JsonLogic.resolve(%{"max" => [1]}) == 1
+    end
 
-      assert JsonLogic.resolve(%{"max" => [1.1, 2.1, 3.1]}) == 3.1
-      assert JsonLogic.resolve(%{"max" => [1.1, 3.1, 3.1]}) == 3.1
-      assert JsonLogic.resolve(%{"max" => [3.1, 2.1, 1.1]}) == 3.1
-      assert JsonLogic.resolve(%{"max" => [3.1, 2.1]}) == 3.1
-      assert JsonLogic.resolve(%{"max" => [1.1]}) == 1.1
+    test "floats" do
+      assert_approx_eq(3.1, JsonLogic.resolve(%{"max" => [1.1, 2.1, 3.1]}))
+      assert_approx_eq(3.1, JsonLogic.resolve(%{"max" => [1.1, 3.1, 3.1]}))
+      assert_approx_eq(3.1, JsonLogic.resolve(%{"max" => [3.1, 2.1, 1.1]}))
+      assert_approx_eq(3.1, JsonLogic.resolve(%{"max" => [3.1, 2.1]}))
+      assert_approx_eq(1.1, JsonLogic.resolve(%{"max" => [1.1]}))
 
       assert JsonLogic.resolve(%{"max" => ["1.1", "2.1", "3.1"]}) == "3.1"
       assert JsonLogic.resolve(%{"max" => ["1.1", "3.1", "3.1"]}) == "3.1"
       assert JsonLogic.resolve(%{"max" => ["3.1", "2.1", "1.1"]}) == "3.1"
-      assert JsonLogic.resolve(%{"max" => ["3.", "2.1", "1.1"]}) == nil
+      assert JsonLogic.resolve(%{"max" => ["3.", "2.1", "1.1"]}) == "3."
       assert JsonLogic.resolve(%{"max" => ["3.1", "2.1"]}) == "3.1"
       assert JsonLogic.resolve(%{"max" => ["1.1"]}) == "1.1"
-      assert JsonLogic.resolve(%{"max" => ["1."]}) == nil
+      assert JsonLogic.resolve(%{"max" => ["1."]}) == "1."
 
-      assert JsonLogic.resolve(%{"max" => ["1.1", "2.1", 3.1]}) == 3.1
-      assert JsonLogic.resolve(%{"max" => [3.1, "2.1", "1.1"]}) == 3.1
-      assert JsonLogic.resolve(%{"max" => [3.1, "2.1"]}) == 3.1
+      assert_approx_eq(3.1, JsonLogic.resolve(%{"max" => ["1.1", "2.1", 3.1]}))
+      assert_approx_eq(3.1, JsonLogic.resolve(%{"max" => [3.1, "2.1", "1.1"]}))
+      assert_approx_eq(3.1, JsonLogic.resolve(%{"max" => [3.1, "2.1"]}))
+    end
 
+    test "integer, floats, and decimals" do
+      ones = [1, 1.0, "1", "1.0", Decimal.new("1.0")]
+      twos = [2, 2.0, "2", "2.0", Decimal.new("2.0")]
+      threes = [3, 3.0, "3", "3.0", Decimal.new("3.0")]
+
+      for one <- ones, two <- twos, three <- threes do
+        assert_approx_eq(3, JsonLogic.resolve(%{"max" => [one, two, three]}))
+      end
+    end
+
+    test "list with non numeric value" do
       assert JsonLogic.resolve(%{"max" => ["1", "2", "foo"]}) == nil
+    end
+
+    test "empty list" do
       assert JsonLogic.resolve(%{"max" => []}) == nil
     end
   end
@@ -394,7 +536,7 @@ defmodule JsonLogicTest do
       assert JsonLogic.resolve(logic, data) == 1
     end
 
-    test "specification" do
+    test "integers" do
       assert JsonLogic.resolve(%{"min" => [1, 2, 3]}) == 1
       assert JsonLogic.resolve(%{"min" => [1, 3, 3]}) == 1
       assert JsonLogic.resolve(%{"min" => [3, 2, 1]}) == 1
@@ -411,7 +553,9 @@ defmodule JsonLogicTest do
       assert JsonLogic.resolve(%{"min" => [1, "3", "3"]}) == 1
       assert JsonLogic.resolve(%{"min" => ["3", "2", 1]}) == 1
       assert JsonLogic.resolve(%{"min" => ["3", 2]}) == 2
+    end
 
+    test "floats" do
       assert JsonLogic.resolve(%{"min" => [1.1, 2.1, 3.1]}) == 1.1
       assert JsonLogic.resolve(%{"min" => [1.1, 3.1, 3.1]}) == 1.1
       assert JsonLogic.resolve(%{"min" => [3.1, 2.1, 1.1]}) == 1.1
@@ -424,10 +568,25 @@ defmodule JsonLogicTest do
       assert JsonLogic.resolve(%{"min" => ["3.1", "2.1"]}) == "2.1"
       assert JsonLogic.resolve(%{"min" => ["1.1"]}) == "1.1"
 
-      assert JsonLogic.resolve(%{"min" => ["1.", "2.1", "3.1"]}) == nil
-      assert JsonLogic.resolve(%{"min" => ["1."]}) == nil
+      assert JsonLogic.resolve(%{"min" => ["1.", "2.1", "3.1"]}) == "1."
+      assert JsonLogic.resolve(%{"min" => ["1."]}) == "1."
+    end
 
+    test "integer, floats, and decimals" do
+      ones = [1, 1.0, "1", "1.0", Decimal.new("1.0")]
+      twos = [2, 2.0, "2", "2.0", Decimal.new("2.0")]
+      threes = [3, 3.0, "3", "3.0", Decimal.new("3.0")]
+
+      for one <- ones, two <- twos, three <- threes do
+        assert_approx_eq(1, JsonLogic.resolve(%{"min" => [one, two, three]}))
+      end
+    end
+
+    test "list with non numeric value" do
       assert JsonLogic.resolve(%{"min" => ["1", "2", "foo"]}) == nil
+    end
+
+    test "empty list" do
       assert JsonLogic.resolve(%{"min" => []}) == nil
     end
   end
@@ -443,18 +602,36 @@ defmodule JsonLogicTest do
       assert JsonLogic.resolve(%{"+" => []}) == 0
     end
 
-    test "specification" do
+    test "integer addition" do
       assert JsonLogic.resolve(%{"+" => [1, 2]}) == 3
       assert JsonLogic.resolve(%{"+" => [1, 2, 3]}) == 6
       assert JsonLogic.resolve(%{"+" => [1, 2, 3, 4]}) == 10
       assert JsonLogic.resolve(%{"+" => [1]}) == 1
-      assert JsonLogic.resolve(%{"+" => ["3.14"]}) == 3.14
 
       assert JsonLogic.resolve(%{"+" => [1, "2"]}) == 3
       assert JsonLogic.resolve(%{"+" => [1, 2, "3"]}) == 6
       assert JsonLogic.resolve(%{"+" => [1, "2", "3", 4]}) == 10
       assert JsonLogic.resolve(%{"+" => ["1"]}) == 1
       assert JsonLogic.resolve(%{"+" => ["1", 1]}) == 2
+    end
+
+    test "float addition" do
+      assert_approx_eq(3.14, JsonLogic.resolve(%{"+" => ["3.14"]}))
+      assert_approx_eq(3.14, JsonLogic.resolve(%{"+" => ["1.14", "2.0"]}))
+    end
+
+    test "float addition with mixed integer" do
+      assert_approx_eq(3.14, JsonLogic.resolve(%{"+" => ["1.14", "2"]}))
+      assert_approx_eq(3.14, JsonLogic.resolve(%{"+" => ["1.14", 2]}))
+    end
+
+    test "integer, float, and decimal addition" do
+      ones = [1, 1.0, "1", "1.0", Decimal.new("1.0")]
+      twos = [2, 2.0, "2", "2.0", Decimal.new("2.0")]
+
+      for left <- ones, right <- twos do
+        assert_approx_eq(3, JsonLogic.resolve(%{"+" => [left, right]}))
+      end
     end
   end
 
@@ -474,15 +651,13 @@ defmodule JsonLogicTest do
     end
 
     test "floating point handles" do
-      assert JsonLogic.resolve(%{"-" => [1.1, 2.2]}) == -1.1
-      assert JsonLogic.resolve(%{"-" => ["1.", 2.2]}) == -1.2000000000000002
-      assert JsonLogic.resolve(%{"-" => ["1.0e1", 2.2]}) == 7.8
-      assert JsonLogic.resolve(%{"-" => ["1.0E1", 2.2]}) == 7.8
-      assert JsonLogic.resolve(%{"-" => ["1.0E+1", 2.2]}) == 7.8
+      assert_approx_eq(-1.1, JsonLogic.resolve(%{"-" => [1.1, 2.2]}))
+      assert_approx_eq(-1.2, JsonLogic.resolve(%{"-" => ["1.", 2.2]}))
+      assert_approx_eq(7.8, JsonLogic.resolve(%{"-" => ["1.0e1", 2.2]}))
+      assert_approx_eq(7.8, JsonLogic.resolve(%{"-" => ["1.0E1", 2.2]}))
+      assert_approx_eq(7.8, JsonLogic.resolve(%{"-" => ["1.0E+1", 2.2]}))
 
-      assert_raise(ArgumentError, fn ->
-        JsonLogic.resolve(%{"-" => ["1.0F+1", 2.2]}) == 7.8
-      end)
+      assert JsonLogic.resolve(%{"-" => ["1.0F+1", 2.2]}) == nil
     end
 
     test "specification" do
@@ -505,6 +680,15 @@ defmodule JsonLogicTest do
       assert JsonLogic.resolve(%{"-" => [1, "2"]}) == -1
       assert JsonLogic.resolve(%{"-" => [3, "2"]}) == 1
     end
+
+    test "integer, float, and decimal subtraction" do
+      ones = [1, 1.0, "1", "1.0", Decimal.new("1.0")]
+      twos = [2, 2.0, "2", "2.0", Decimal.new("2.0")]
+
+      for left <- ones, right <- twos do
+        assert_approx_eq(-1, JsonLogic.resolve(%{"-" => [left, right]}))
+      end
+    end
   end
 
   describe "*" do
@@ -514,7 +698,12 @@ defmodule JsonLogicTest do
       assert JsonLogic.resolve(logic, data) == 10
     end
 
-    test "specification" do
+    test "strings being multipled" do
+      assert JsonLogic.resolve(%{"*" => ["a", "b"]}) == nil
+      assert JsonLogic.resolve(%{"*" => ["a"]}) == nil
+    end
+
+    test "integer multiplication" do
       assert JsonLogic.resolve(%{"*" => [1, 2]}) == 2
       assert JsonLogic.resolve(%{"*" => [1, 2, 3]}) == 6
       assert JsonLogic.resolve(%{"*" => [1, 2, 3, 4]}) == 24
@@ -526,6 +715,50 @@ defmodule JsonLogicTest do
       assert JsonLogic.resolve(%{"*" => ["1"]}) == 1
       assert JsonLogic.resolve(%{"*" => ["1", 1]}) == 1
     end
+
+    test "float multiplication" do
+      assert JsonLogic.resolve(%{"*" => [1.0, 2.0]}) == 2.0
+      assert JsonLogic.resolve(%{"*" => [1.0, 2.0, 3.0]}) == 6.0
+      assert JsonLogic.resolve(%{"*" => [1.0, 2.0, 3.0, 4.0]}) == 24.0
+      assert JsonLogic.resolve(%{"*" => [1.0]}) == 1.0
+
+      assert JsonLogic.resolve(%{"*" => [1.0, "2.0"]}) == 2.0
+      assert JsonLogic.resolve(%{"*" => [1.0, 2.0, "3.0"]}) == 6.0
+      assert JsonLogic.resolve(%{"*" => [1.0, "2.0", "3.0", 4.0]}) == 24.0
+      assert JsonLogic.resolve(%{"*" => ["1.0"]}) == 1.0
+      assert JsonLogic.resolve(%{"*" => ["1.0", 1.0]}) == 1.0
+    end
+
+    test "decimal multiplication" do
+      twos = [2, 2.0, "2.0", Decimal.new("2.0")]
+
+      for left <- twos, right <- twos do
+        assert_approx_eq(
+          Decimal.new("4.0"),
+          JsonLogic.resolve(%{"*" => [left, right]})
+        )
+      end
+
+      assert_approx_eq(
+        Decimal.new("8.0"),
+        JsonLogic.resolve(%{
+          "*" => [
+            Decimal.new("2.0"),
+            Decimal.new("2.0"),
+            Decimal.new("2.0")
+          ]
+        })
+      )
+
+      assert JsonLogic.resolve(%{"*" => ["1", "foo"]}) == nil
+      assert JsonLogic.resolve(%{"*" => [1, "foo"]}) == nil
+      assert JsonLogic.resolve(%{"*" => [1.0, "foo"]}) == nil
+      assert JsonLogic.resolve(%{"*" => ["1.0", "foo"]}) == nil
+      assert JsonLogic.resolve(%{"*" => ["foo", "1"]}) == nil
+      assert JsonLogic.resolve(%{"*" => ["foo", 1]}) == nil
+      assert JsonLogic.resolve(%{"*" => ["foo", 1.0]}) == nil
+      assert JsonLogic.resolve(%{"*" => ["foo", "1.0"]}) == nil
+    end
   end
 
   describe "/" do
@@ -535,7 +768,7 @@ defmodule JsonLogicTest do
       assert JsonLogic.resolve(logic, data) == 2.5
     end
 
-    test "specification" do
+    test "integer division" do
       assert JsonLogic.resolve(%{"/" => [4, 2]}) == 2
       assert JsonLogic.resolve(%{"/" => [4, "2"]}) == 2
       assert JsonLogic.resolve(%{"/" => ["4", "2"]}) == 2
@@ -550,173 +783,200 @@ defmodule JsonLogicTest do
       assert JsonLogic.resolve(%{"/" => ["1", "1"]}) == 1
       assert JsonLogic.resolve(%{"/" => [1, "1"]}) == 1
     end
+
+    test "float division" do
+      assert JsonLogic.resolve(%{"/" => [2.0, 4.0]}) == 0.5
+      assert JsonLogic.resolve(%{"/" => ["2.0", 4.0]}) == 0.5
+      assert JsonLogic.resolve(%{"/" => ["2.0", "4.0"]}) == 0.5
+      assert JsonLogic.resolve(%{"/" => [2.0, "4.0"]}) == 0.5
+    end
+
+    test "decimal division" do
+      twos = [2, 2.0, "2.0", Decimal.new("2.0")]
+
+      for left <- twos, right <- twos do
+        assert_approx_eq(
+          Decimal.new("1.0"),
+          JsonLogic.resolve(%{"/" => [left, right]})
+        )
+      end
+
+      assert JsonLogic.resolve(%{"/" => ["1", "foo"]}) == nil
+      assert JsonLogic.resolve(%{"/" => [1, "foo"]}) == nil
+      assert JsonLogic.resolve(%{"/" => [1.0, "foo"]}) == nil
+      assert JsonLogic.resolve(%{"/" => ["1.0", "foo"]}) == nil
+      assert JsonLogic.resolve(%{"/" => ["foo", "1"]}) == nil
+      assert JsonLogic.resolve(%{"/" => ["foo", 1]}) == nil
+      assert JsonLogic.resolve(%{"/" => ["foo", 1.0]}) == nil
+      assert JsonLogic.resolve(%{"/" => ["foo", "1.0"]}) == nil
+    end
   end
 
   describe "%" do
-    test "specification" do
-      assert JsonLogic.resolve(%{"%" => [1, 2]}) == 1
-      assert JsonLogic.resolve(%{"%" => [2, 2]}) == 0
-      assert JsonLogic.resolve(%{"%" => [3, 2]}) == 1
+    test "integer, float, and decimal remainders" do
+      ones = [1, 1.0, "1", "1.0", Decimal.new("1.0")]
+      twos = [2, 2.0, "2", "2.0", Decimal.new("2.0")]
+
+      for left <- ones, right <- twos do
+        assert_approx_eq(1.0, JsonLogic.resolve(%{"%" => [left, right]}))
+      end
     end
   end
 
   describe ">" do
-    test "specification" do
-      assert JsonLogic.resolve(%{">" => [1, 1]}) == false
-      assert JsonLogic.resolve(%{">" => [2, 1]}) == true
-      assert JsonLogic.resolve(%{">" => [1, 2]}) == false
+    test "integer, float, and decimal comparisons" do
+      ones = [Decimal.new("1.0"), "1.0", "1", 1.0, 1]
+      twos = [Decimal.new("2.0"), "2.0", "2", 2.0, 2]
 
-      assert JsonLogic.resolve(%{">" => ["1", 1]}) == false
-      assert JsonLogic.resolve(%{">" => ["2", 1]}) == true
-      assert JsonLogic.resolve(%{">" => ["1", 2]}) == false
+      for left <- ones, right <- ones do
+        refute JsonLogic.resolve(%{">" => [left, right]})
+      end
 
-      assert JsonLogic.resolve(%{">" => ["1", "1"]}) == false
-      assert JsonLogic.resolve(%{">" => ["2", "1"]}) == true
-      assert JsonLogic.resolve(%{">" => ["1", "2"]}) == false
+      for left <- twos, right <- ones do
+        assert JsonLogic.resolve(%{">" => [left, right]})
+      end
 
-      assert JsonLogic.resolve(%{">" => [1, "1"]}) == false
-      assert JsonLogic.resolve(%{">" => [2, "1"]}) == true
-      assert JsonLogic.resolve(%{">" => [1, "2"]}) == false
+      for left <- ones, right <- twos do
+        refute JsonLogic.resolve(%{">" => [left, right]})
+      end
 
-      assert JsonLogic.resolve(%{">" => [1.1, 1.1]}) == false
-      assert JsonLogic.resolve(%{">" => [2.1, 1.1]}) == true
-      assert JsonLogic.resolve(%{">" => [1.1, 2.1]}) == false
+      for left <- ones, right <- ones do
+        logic = %{">" => [%{"var" => "left"}, %{"var" => "right"}]}
+        refute JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
 
-      assert JsonLogic.resolve(%{">" => ["1.1", 1.1]}) == false
-      assert JsonLogic.resolve(%{">" => ["2.1", 1.1]}) == true
-      assert JsonLogic.resolve(%{">" => ["1.1", 2.1]}) == false
+      for left <- twos, right <- ones do
+        logic = %{">" => [%{"var" => "left"}, %{"var" => "right"}]}
+        assert JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
 
-      assert JsonLogic.resolve(%{">" => ["1.1", "1.1"]}) == false
-      assert JsonLogic.resolve(%{">" => ["2.1", "1.1"]}) == true
-      assert JsonLogic.resolve(%{">" => ["1.1", "2.1"]}) == false
-
-      assert JsonLogic.resolve(%{">" => [1.1, "1.1"]}) == false
-      assert JsonLogic.resolve(%{">" => [2.1, "1.1"]}) == true
-      assert JsonLogic.resolve(%{">" => [1.1, "2.1"]}) == false
+      for left <- ones, right <- twos do
+        logic = %{">" => [%{"var" => "left"}, %{"var" => "right"}]}
+        refute JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
     end
   end
 
   describe ">=" do
-    test "specification" do
-      assert JsonLogic.resolve(%{">=" => [1, 1]}) == true
-      assert JsonLogic.resolve(%{">=" => [2, 1]}) == true
-      assert JsonLogic.resolve(%{">=" => [1, 2]}) == false
+    test "number compared to non numeric string" do
+      refute JsonLogic.resolve(%{">=" => [1, "foo"]})
+      refute JsonLogic.resolve(%{">=" => ["foo", 1]})
+    end
 
-      assert JsonLogic.resolve(%{">=" => ["1", 1]}) == true
-      assert JsonLogic.resolve(%{">=" => ["2", 1]}) == true
-      assert JsonLogic.resolve(%{">=" => ["1", 2]}) == false
+    test "integer, float, and decimal comparisons" do
+      ones = [Decimal.new("1.0"), "1.0", "1", 1.0, 1]
+      twos = [Decimal.new("2.0"), "2.0", "2", 2.0, 2]
 
-      assert JsonLogic.resolve(%{">=" => ["1", "1"]}) == true
-      assert JsonLogic.resolve(%{">=" => ["2", "1"]}) == true
-      assert JsonLogic.resolve(%{">=" => ["1", "2"]}) == false
+      for left <- ones, right <- ones do
+        assert JsonLogic.resolve(%{">=" => [left, right]})
+      end
 
-      assert JsonLogic.resolve(%{">=" => [1, "1"]}) == true
-      assert JsonLogic.resolve(%{">=" => [2, "1"]}) == true
-      assert JsonLogic.resolve(%{">=" => [1, "2"]}) == false
+      for left <- twos, right <- ones do
+        assert JsonLogic.resolve(%{">=" => [left, right]})
+      end
 
-      assert JsonLogic.resolve(%{">=" => [1.1, 1.1]}) == true
-      assert JsonLogic.resolve(%{">=" => [2.1, 1.1]}) == true
-      assert JsonLogic.resolve(%{">=" => [1.1, 2.1]}) == false
+      for left <- ones, right <- twos do
+        refute JsonLogic.resolve(%{">=" => [left, right]})
+      end
 
-      assert JsonLogic.resolve(%{">=" => [1.1, "1.1"]}) == true
-      assert JsonLogic.resolve(%{">=" => [2.1, "1.1"]}) == true
-      assert JsonLogic.resolve(%{">=" => [1.1, "2.1"]}) == false
+      for left <- ones, right <- ones do
+        logic = %{">=" => [%{"var" => "left"}, %{"var" => "right"}]}
+        assert JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
 
-      assert JsonLogic.resolve(%{">=" => ["1.1", 1.1]}) == true
-      assert JsonLogic.resolve(%{">=" => ["2.1", 1.1]}) == true
-      assert JsonLogic.resolve(%{">=" => ["1.1", 2.1]}) == false
+      for left <- twos, right <- ones do
+        logic = %{">=" => [%{"var" => "left"}, %{"var" => "right"}]}
+        assert JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
 
-      assert JsonLogic.resolve(%{">=" => ["1.1", "1.1"]}) == true
-      assert JsonLogic.resolve(%{">=" => ["2.1", "1.1"]}) == true
-      assert JsonLogic.resolve(%{">=" => ["1.1", "2.1"]}) == false
+      for left <- ones, right <- twos do
+        logic = %{">=" => [%{"var" => "left"}, %{"var" => "right"}]}
+        refute JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
     end
   end
 
   describe "<" do
-    test "specification" do
-      assert JsonLogic.resolve(%{"<" => [1, 1]}) == false
-      assert JsonLogic.resolve(%{"<" => [2, 1]}) == false
-      assert JsonLogic.resolve(%{"<" => [1, 2]}) == true
+    test "integer, float, and decimal comparisons" do
+      ones = [Decimal.new("1.0"), "1.0", "1", 1.0, 1]
+      twos = [Decimal.new("2.0"), "2.0", "2", 2.0, 2]
 
-      assert JsonLogic.resolve(%{"<" => ["1", 1]}) == false
-      assert JsonLogic.resolve(%{"<" => ["2", 1]}) == false
-      assert JsonLogic.resolve(%{"<" => ["1", 2]}) == true
+      for left <- ones, right <- ones do
+        refute JsonLogic.resolve(%{"<" => [left, right]})
+      end
 
-      assert JsonLogic.resolve(%{"<" => ["1", "1"]}) == false
-      assert JsonLogic.resolve(%{"<" => ["2", "1"]}) == false
-      assert JsonLogic.resolve(%{"<" => ["1", "2"]}) == true
+      for left <- twos, right <- ones do
+        refute JsonLogic.resolve(%{"<" => [left, right]})
+      end
 
-      assert JsonLogic.resolve(%{"<" => [1, "1"]}) == false
-      assert JsonLogic.resolve(%{"<" => [2, "1"]}) == false
-      assert JsonLogic.resolve(%{"<" => [1, "2"]}) == true
+      for left <- ones, right <- twos do
+        assert JsonLogic.resolve(%{"<" => [left, right]})
+      end
 
-      assert JsonLogic.resolve(%{"<" => [1.1, 1.1]}) == false
-      assert JsonLogic.resolve(%{"<" => [2.1, 1.1]}) == false
-      assert JsonLogic.resolve(%{"<" => [1.1, 2.1]}) == true
+      for left <- ones, right <- ones do
+        logic = %{"<" => [%{"var" => "left"}, %{"var" => "right"}]}
+        refute JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
 
-      assert JsonLogic.resolve(%{"<" => ["1.1", 1.1]}) == false
-      assert JsonLogic.resolve(%{"<" => ["2.1", 1.1]}) == false
-      assert JsonLogic.resolve(%{"<" => ["1.1", 2.1]}) == true
+      for left <- twos, right <- ones do
+        logic = %{"<" => [%{"var" => "left"}, %{"var" => "right"}]}
+        refute JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
 
-      assert JsonLogic.resolve(%{"<" => ["1.1", "1.1"]}) == false
-      assert JsonLogic.resolve(%{"<" => ["2.1", "1.1"]}) == false
-      assert JsonLogic.resolve(%{"<" => ["1.1", "2.1"]}) == true
-
-      assert JsonLogic.resolve(%{"<" => [1.1, "1.1"]}) == false
-      assert JsonLogic.resolve(%{"<" => [2.1, "1.1"]}) == false
-      assert JsonLogic.resolve(%{"<" => [1.1, "2.1"]}) == true
+      for left <- ones, right <- twos do
+        logic = %{"<" => [%{"var" => "left"}, %{"var" => "right"}]}
+        assert JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
     end
   end
 
   describe "<=" do
-    test "specification" do
-      assert JsonLogic.resolve(%{"<=" => [1, 1]}) == true
-      assert JsonLogic.resolve(%{"<=" => [2, 1]}) == false
-      assert JsonLogic.resolve(%{"<=" => [1, 2]}) == true
+    test "integer, float, and decimal comparisons" do
+      ones = [Decimal.new("1.0"), "1.0", "1", 1.0, 1]
+      twos = [Decimal.new("2.0"), "2.0", "2", 2.0, 2]
 
-      assert JsonLogic.resolve(%{"<=" => ["1", 1]}) == true
-      assert JsonLogic.resolve(%{"<=" => ["2", 1]}) == false
-      assert JsonLogic.resolve(%{"<=" => ["1", 2]}) == true
+      for left <- ones, right <- ones do
+        assert JsonLogic.resolve(%{"<=" => [left, right]})
+      end
 
-      assert JsonLogic.resolve(%{"<=" => ["1", "1"]}) == true
-      assert JsonLogic.resolve(%{"<=" => ["2", "1"]}) == false
-      assert JsonLogic.resolve(%{"<=" => ["1", "2"]}) == true
+      for left <- twos, right <- ones do
+        refute JsonLogic.resolve(%{"<=" => [left, right]})
+      end
 
-      assert JsonLogic.resolve(%{"<=" => [1, "1"]}) == true
-      assert JsonLogic.resolve(%{"<=" => [2, "1"]}) == false
-      assert JsonLogic.resolve(%{"<=" => [1, "2"]}) == true
+      for left <- ones, right <- twos do
+        assert JsonLogic.resolve(%{"<=" => [left, right]})
+      end
 
-      assert JsonLogic.resolve(%{"<=" => [1.1, 1.1]}) == true
-      assert JsonLogic.resolve(%{"<=" => [2.1, 1.1]}) == false
-      assert JsonLogic.resolve(%{"<=" => [1.1, 2.1]}) == true
+      for left <- ones, right <- ones do
+        logic = %{"<=" => [%{"var" => "left"}, %{"var" => "right"}]}
+        assert JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
 
-      assert JsonLogic.resolve(%{"<=" => [1.1, "1.1"]}) == true
-      assert JsonLogic.resolve(%{"<=" => [2.1, "1.1"]}) == false
-      assert JsonLogic.resolve(%{"<=" => [1.1, "2.1"]}) == true
+      for left <- twos, right <- ones do
+        logic = %{"<=" => [%{"var" => "left"}, %{"var" => "right"}]}
+        refute JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
 
-      assert JsonLogic.resolve(%{"<=" => ["1.1", 1.1]}) == true
-      assert JsonLogic.resolve(%{"<=" => ["2.1", 1.1]}) == false
-      assert JsonLogic.resolve(%{"<=" => ["1.1", 2.1]}) == true
-
-      assert JsonLogic.resolve(%{"<=" => ["1.1", "1.1"]}) == true
-      assert JsonLogic.resolve(%{"<=" => ["2.1", "1.1"]}) == false
-      assert JsonLogic.resolve(%{"<=" => ["1.1", "2.1"]}) == true
+      for left <- ones, right <- twos do
+        logic = %{"<=" => [%{"var" => "left"}, %{"var" => "right"}]}
+        assert JsonLogic.resolve(logic, %{"left" => left, "right" => right})
+      end
     end
   end
 
   describe "between" do
     test "exclusive" do
-      assert JsonLogic.resolve(%{"<" => [1, 2, 3]}) == true
-      assert JsonLogic.resolve(%{"<" => [1, 1, 3]}) == false
-      assert JsonLogic.resolve(%{"<" => [1, 3, 3]}) == false
-      assert JsonLogic.resolve(%{"<" => [1, 4, 3]}) == false
+      assert JsonLogic.resolve(%{"<" => [1, 2, 3]})
+      refute JsonLogic.resolve(%{"<" => [1, 1, 3]})
+      refute JsonLogic.resolve(%{"<" => [1, 3, 3]})
+      refute JsonLogic.resolve(%{"<" => [1, 4, 3]})
     end
 
     test "inclusive" do
-      assert JsonLogic.resolve(%{"<=" => [1, 2, 3]}) == true
-      assert JsonLogic.resolve(%{"<=" => [1, 1, 3]}) == true
-      assert JsonLogic.resolve(%{"<=" => [1, 3, 3]}) == true
-      assert JsonLogic.resolve(%{"<=" => [1, 4, 3]}) == false
+      assert JsonLogic.resolve(%{"<=" => [1, 2, 3]})
+      assert JsonLogic.resolve(%{"<=" => [1, 1, 3]})
+      assert JsonLogic.resolve(%{"<=" => [1, 3, 3]})
+      refute JsonLogic.resolve(%{"<=" => [1, 4, 3]})
     end
   end
 
@@ -766,7 +1026,7 @@ defmodule JsonLogicTest do
       logic = %{"in" => [%{"var" => "find"}, %{"var" => "from"}]}
       data = %{"find" => "sub", "from" => "substring"}
 
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
     end
 
     test "returns true from var list" do
@@ -777,7 +1037,7 @@ defmodule JsonLogicTest do
         "from" => ["sub", "string"]
       }
 
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
     end
 
     test "returns false from nil" do
@@ -788,7 +1048,7 @@ defmodule JsonLogicTest do
         "from" => nil
       }
 
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
     end
 
     test "returns false from var list" do
@@ -799,13 +1059,13 @@ defmodule JsonLogicTest do
         "from" => ["A", "B"]
       }
 
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
     end
 
     test "Bart is found in the list" do
       logic = %{"in" => ["Bart", ["Bart", "Homer", "Lisa", "Marge", "Maggie"]]}
 
-      assert JsonLogic.resolve(logic) == true
+      assert JsonLogic.resolve(logic)
     end
 
     test "Milhouse is not found in the list" do
@@ -813,12 +1073,12 @@ defmodule JsonLogicTest do
         "in" => ["Milhouse", ["Bart", "Homer", "Lisa", "Marge", "Maggie"]]
       }
 
-      assert JsonLogic.resolve(logic) == false
+      refute JsonLogic.resolve(logic)
     end
 
     test "finding a string in a string" do
-      assert JsonLogic.resolve(%{"in" => ["Spring", "Springfield"]}) == true
-      assert JsonLogic.resolve(%{"in" => ["i", "team"]}) == false
+      assert JsonLogic.resolve(%{"in" => ["Spring", "Springfield"]})
+      refute JsonLogic.resolve(%{"in" => ["i", "team"]})
     end
 
     test "raises on non-enumerable list" do
@@ -923,6 +1183,7 @@ defmodule JsonLogicTest do
       assert JsonLogic.resolve(%{"cat" => [1.0, 2.0]}) == "1.02.0"
       assert JsonLogic.resolve(%{"cat" => [1.1, 2.1]}) == "1.12.1"
       assert JsonLogic.resolve(%{"cat" => ["Robocop", 2]}) == "Robocop2"
+      assert JsonLogic.resolve(%{"cat" => ["a", nil, "b"]}) == "ab"
 
       logic = %{"cat" => ["we all scream for ", "ice", "cream"]}
       assert JsonLogic.resolve(logic) == "we all scream for icecream"
@@ -993,16 +1254,16 @@ defmodule JsonLogicTest do
 
     test "compount test" do
       logic = %{"and" => [%{">" => [3, 1]}, true]}
-      assert JsonLogic.resolve(logic, %{}) == true
+      assert JsonLogic.resolve(logic, %{})
 
       logic = %{"and" => [%{">" => [3, 1]}, false]}
-      assert JsonLogic.resolve(logic, %{}) == false
+      refute JsonLogic.resolve(logic, %{})
 
       logic = %{"and" => [%{">" => [3, 1]}, %{"!" => true}]}
-      assert JsonLogic.resolve(logic, %{}) == false
+      refute JsonLogic.resolve(logic, %{})
 
       logic = %{"and" => [%{">" => [3, 1]}, %{"<" => [1, 3]}]}
-      assert JsonLogic.resolve(logic, %{}) == true
+      assert JsonLogic.resolve(logic, %{})
 
       logic = %{"?:" => [%{">" => [3, 1]}, "visible", "hidden"]}
       assert JsonLogic.resolve(logic, %{}) == "visible"
@@ -1070,7 +1331,7 @@ defmodule JsonLogicTest do
       }
 
       data = %{"pie" => %{"filling" => "apple"}, "temp" => 100}
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
       logic = %{
         "var" => [
@@ -1089,7 +1350,7 @@ defmodule JsonLogicTest do
 
       logic = %{"in" => [%{"var" => "filling"}, ["apple", "cherry"]]}
       data = %{"filling" => "apple"}
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
       logic = %{"var" => "a.b.c"}
       assert JsonLogic.resolve(logic, nil) == nil
@@ -1342,19 +1603,19 @@ defmodule JsonLogicTest do
 
       logic = %{"all" => [%{"var" => "integers"}, %{">=" => [%{"var" => ""}, 1]}]}
       data = %{"integers" => [1, 2, 3]}
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
       logic = %{"all" => [%{"var" => "integers"}, %{"==" => [%{"var" => ""}, 1]}]}
       data = %{"integers" => [1, 2, 3]}
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{"all" => [%{"var" => "integers"}, %{"<" => [%{"var" => ""}, 1]}]}
       data = %{"integers" => [1, 2, 3]}
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{"all" => [%{"var" => "integers"}, %{"<" => [%{"var" => ""}, 1]}]}
       data = %{"integers" => []}
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{"all" => [%{"var" => "items"}, %{">=" => [%{"var" => "qty"}, 1]}]}
 
@@ -1365,7 +1626,7 @@ defmodule JsonLogicTest do
         ]
       }
 
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
       logic = %{"all" => [%{"var" => "items"}, %{">" => [%{"var" => "qty"}, 1]}]}
 
@@ -1376,7 +1637,7 @@ defmodule JsonLogicTest do
         ]
       }
 
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{"all" => [%{"var" => "items"}, %{"<" => [%{"var" => "qty"}, 1]}]}
 
@@ -1387,27 +1648,27 @@ defmodule JsonLogicTest do
         ]
       }
 
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{"all" => [%{"var" => "items"}, %{">=" => [%{"var" => "qty"}, 1]}]}
       data = %{"items" => []}
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{"none" => [%{"var" => "integers"}, %{">=" => [%{"var" => ""}, 1]}]}
       data = %{"integers" => [1, 2, 3]}
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{"none" => [%{"var" => "integers"}, %{"==" => [%{"var" => ""}, 1]}]}
       data = %{"integers" => [1, 2, 3]}
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{"none" => [%{"var" => "integers"}, %{"<" => [%{"var" => ""}, 1]}]}
       data = %{"integers" => [1, 2, 3]}
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
       logic = %{"none" => [%{"var" => "integers"}, %{"<" => [%{"var" => ""}, 1]}]}
       data = %{"integers" => []}
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
       logic = %{"none" => [%{"var" => "items"}, %{">=" => [%{"var" => "qty"}, 1]}]}
 
@@ -1418,7 +1679,7 @@ defmodule JsonLogicTest do
         ]
       }
 
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{"none" => [%{"var" => "items"}, %{">" => [%{"var" => "qty"}, 1]}]}
 
@@ -1429,7 +1690,7 @@ defmodule JsonLogicTest do
         ]
       }
 
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{"none" => [%{"var" => "items"}, %{"<" => [%{"var" => "qty"}, 1]}]}
 
@@ -1440,27 +1701,27 @@ defmodule JsonLogicTest do
         ]
       }
 
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
       logic = %{"none" => [%{"var" => "items"}, %{">=" => [%{"var" => "qty"}, 1]}]}
       data = %{"items" => []}
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
       logic = %{"some" => [%{"var" => "integers"}, %{">=" => [%{"var" => ""}, 1]}]}
       data = %{"integers" => [1, 2, 3]}
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
       logic = %{"some" => [%{"var" => "integers"}, %{"==" => [%{"var" => ""}, 1]}]}
       data = %{"integers" => [1, 2, 3]}
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
       logic = %{"some" => [%{"var" => "integers"}, %{"<" => [%{"var" => ""}, 1]}]}
       data = %{"integers" => [1, 2, 3]}
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{"some" => [%{"var" => "integers"}, %{"<" => [%{"var" => ""}, 1]}]}
       data = %{"integers" => []}
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{"some" => [%{"var" => "items"}, %{">=" => [%{"var" => "qty"}, 1]}]}
 
@@ -1471,7 +1732,7 @@ defmodule JsonLogicTest do
         ]
       }
 
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
       logic = %{"some" => [%{"var" => "items"}, %{">" => [%{"var" => "qty"}, 1]}]}
 
@@ -1482,7 +1743,7 @@ defmodule JsonLogicTest do
         ]
       }
 
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
       logic = %{"some" => [%{"var" => "items"}, %{"<" => [%{"var" => "qty"}, 1]}]}
 
@@ -1493,51 +1754,51 @@ defmodule JsonLogicTest do
         ]
       }
 
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{"some" => [%{"var" => "items"}, %{">=" => [%{"var" => "qty"}, 1]}]}
       data = %{"items" => []}
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
     end
   end
 
   describe "data does not contain the param specified in conditions" do
     test "cannot compare nil" do
-      assert JsonLogic.resolve(%{"==" => [nil, nil]}) == true
-      assert JsonLogic.resolve(%{"<" => [nil, nil]}) == true
-      assert JsonLogic.resolve(%{">" => [nil, nil]}) == true
-      assert JsonLogic.resolve(%{"<=" => [nil, nil]}) == true
-      assert JsonLogic.resolve(%{">=" => [nil, nil]}) == true
+      assert JsonLogic.resolve(%{"==" => [nil, nil]})
+      assert JsonLogic.resolve(%{"<" => [nil, nil]})
+      assert JsonLogic.resolve(%{">" => [nil, nil]})
+      assert JsonLogic.resolve(%{"<=" => [nil, nil]})
+      assert JsonLogic.resolve(%{">=" => [nil, nil]})
 
       logic = %{"<=" => [%{"var" => "optional"}, nil]}
       data = %{"optional" => nil}
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
       logic = %{">=" => [%{"var" => "optional"}, nil]}
       data = %{"optional" => nil}
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
       logic = %{"==" => [%{"var" => "optional"}, nil]}
       data = %{"optional" => nil}
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
-      assert JsonLogic.resolve(%{">" => [5, nil]}) == false
-      assert JsonLogic.resolve(%{">" => [nil, 5]}) == false
-      assert JsonLogic.resolve(%{">=" => [5, nil]}) == false
-      assert JsonLogic.resolve(%{">=" => [nil, 5]}) == false
+      refute JsonLogic.resolve(%{">" => [5, nil]})
+      refute JsonLogic.resolve(%{">" => [nil, 5]})
+      refute JsonLogic.resolve(%{">=" => [5, nil]})
+      refute JsonLogic.resolve(%{">=" => [nil, 5]})
 
-      assert JsonLogic.resolve(%{"<" => [5, nil]}) == false
-      assert JsonLogic.resolve(%{"<" => [nil, 5]}) == false
-      assert JsonLogic.resolve(%{"<=" => [5, nil]}) == false
-      assert JsonLogic.resolve(%{"<=" => [nil, 5]}) == false
+      refute JsonLogic.resolve(%{"<" => [5, nil]})
+      refute JsonLogic.resolve(%{"<" => [nil, 5]})
+      refute JsonLogic.resolve(%{"<=" => [5, nil]})
+      refute JsonLogic.resolve(%{"<=" => [nil, 5]})
 
       logic = %{">" => [%{"var" => "quantity"}, 25]}
       data = %{"abc" => 1}
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{"<" => [%{"var" => "quantity"}, 25]}
       data = %{"abc" => 1}
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{
         "and" => [
@@ -1547,7 +1808,7 @@ defmodule JsonLogicTest do
       }
 
       data = %{"code" => "FUM", "occurence" => 15}
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
 
       logic = %{
         "or" => [
@@ -1567,10 +1828,10 @@ defmodule JsonLogicTest do
       }
 
       data = %{"accessorial_service" => %{"code" => "WAT", "occurence" => 15}}
-      assert JsonLogic.resolve(logic, data) == true
+      assert JsonLogic.resolve(logic, data)
 
       data = %{"accessorial_service" => %{"code" => "FUM", "occurence" => 15}}
-      assert JsonLogic.resolve(logic, data) == false
+      refute JsonLogic.resolve(logic, data)
     end
   end
 
@@ -1588,11 +1849,46 @@ defmodule JsonLogicTest do
     end
   end
 
-  describe "multi rule map" do
-    test "raiese exception" do
-      assert_raise(ArgumentError, fn ->
-        JsonLogic.resolve(%{"-" => [1, 1], "+" => [1, 1]})
-      end)
+  describe "providing a json object" do
+    test "passes through the results" do
+      # This is the expected result according to
+      #
+      # https://jsonlogic.com/play.html
+      logic = %{"-" => [1, 1], "+" => [1, 1]}
+      assert logic == JsonLogic.resolve(logic)
     end
+  end
+
+  defp assert_approx_eq(value1, value2) do
+    assert_approx_eq(value1, value2, 1.0e-5)
+  end
+
+  defp assert_approx_eq(value1, value2, delta) when is_float(value1) do
+    assert_approx_eq(Decimal.from_float(value1), value2, delta)
+  end
+
+  defp assert_approx_eq(value1, value2, delta) when is_float(value2) do
+    assert_approx_eq(value1, Decimal.from_float(value2), delta)
+  end
+
+  defp assert_approx_eq(value1, value2, delta) when is_float(delta) do
+    assert_approx_eq(value1, value2, Decimal.from_float(delta))
+  end
+
+  defp assert_approx_eq(value1, value2, delta) do
+    value1 = Decimal.new(value1)
+    value2 = Decimal.new(value2)
+    delta = Decimal.new(delta)
+
+    diff =
+      value1
+      |> Decimal.sub(value2)
+      |> Decimal.abs()
+
+    message =
+      "Expected the difference between #{inspect(value1)} and " <>
+        "#{inspect(value2)} to be less than or equal to #{inspect(delta)}"
+
+    assert Decimal.lt?(diff, delta), message
   end
 end

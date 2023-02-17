@@ -15,3 +15,4 @@
 - fixed: infinite recursive loop for ill formed `in` clauses.
 - fixed: typespec for `resolve/2`.
 - removed: optional dependencies for `jason` and `poison`.
+- added: Support for `Decimal` to be used.

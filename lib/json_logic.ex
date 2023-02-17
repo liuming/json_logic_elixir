@@ -227,9 +227,6 @@ defmodule JsonLogic do
     operation("merge", logic, data)
   end
 
-  def resolve(logic, _) when map_size(logic) > 1,
-    do: raise(ArgumentError, "Invalid logic provided `#{inspect(logic)}`")
-
   def resolve(logic, _), do: logic
 
   defp operation("and", [first], data), do: resolve(first, data)
@@ -258,14 +255,13 @@ defmodule JsonLogic do
 
   defp operation("==", [left, right], data) do
     {op1, op2} = cast_comparison_operator(resolve(left, data), resolve(right, data))
-
-    op1 == op2
+    equal_to(op1, op2)
   end
 
   defp operation("!=", [left, right], data) do
     {op1, op2} = cast_comparison_operator(resolve(left, data), resolve(right, data))
 
-    op1 != op2
+    !equal_to(op1, op2)
   end
 
   defp operation("===", [left, right], data) do
@@ -300,6 +296,9 @@ defmodule JsonLogic do
     list
     |> Enum.reduce_while([], fn element, acc ->
       case resolve(element, data) do
+        %Decimal{} = resolved ->
+          {:cont, [{resolved, resolved} | acc]}
+
         resolved when is_number(resolved) ->
           {:cont, [{resolved, resolved} | acc]}
 
@@ -318,7 +317,7 @@ defmodule JsonLogic do
 
       otherwise ->
         otherwise
-        |> Enum.max_by(fn {_, num} -> num end)
+        |> Enum.max_by(fn {_, num} -> num end, &greater_than_equal_to/2)
         |> then(fn {resolved, _} -> resolved end)
     end
   end
@@ -332,6 +331,9 @@ defmodule JsonLogic do
     list
     |> Enum.reduce_while([], fn element, acc ->
       case resolve(element, data) do
+        %Decimal{} = resolved ->
+          {:cont, [{resolved, resolved} | acc]}
+
         resolved when is_number(resolved) ->
           {:cont, [{resolved, resolved} | acc]}
 
@@ -350,7 +352,7 @@ defmodule JsonLogic do
 
       otherwise ->
         otherwise
-        |> Enum.min_by(fn {_, num} -> num end)
+        |> Enum.min_by(fn {_, num} -> num end, &less_than_equal_to/2)
         |> then(fn {resolved, _} -> resolved end)
     end
   end
@@ -421,7 +423,7 @@ defmodule JsonLogic do
       {nil, nil} -> true
       {nil, _op2} -> false
       {_op1, nil} -> false
-      {op1, op2} -> op1 < op2
+      {op1, op2} -> less_than(op1, op2)
     end
   end
 
@@ -435,7 +437,7 @@ defmodule JsonLogic do
       {nil, nil} -> true
       {nil, _op2} -> false
       {_op1, nil} -> false
-      {op1, op2} -> op1 <= op2
+      {op1, op2} -> less_than_equal_to(op1, op2)
     end
   end
 
@@ -449,7 +451,7 @@ defmodule JsonLogic do
       {nil, nil} -> true
       {nil, _op2} -> false
       {_op1, nil} -> false
-      {op1, op2} -> op1 > op2
+      {op1, op2} -> greater_than(op1, op2)
     end
   end
 
@@ -463,7 +465,7 @@ defmodule JsonLogic do
       {nil, nil} -> true
       {nil, _op2} -> false
       {_op1, nil} -> false
-      {op1, op2} -> op1 >= op2
+      {op1, op2} -> greater_than_equal_to(op1, op2)
     end
   end
 
@@ -477,14 +479,7 @@ defmodule JsonLogic do
   defp operation("+", numbers, data) when is_list(numbers) do
     numbers
     |> Enum.map(&resolve(&1, data))
-    |> Enum.reduce(0, fn
-      str, total when is_binary(str) ->
-        {:ok, num} = parse_number(str)
-        total + num
-
-      num, total ->
-        total + num
-    end)
+    |> Enum.reduce(0, &add/2)
   end
 
   defp operation("+", numbers, data), do: operation("+", [numbers], data)
@@ -493,8 +488,7 @@ defmodule JsonLogic do
 
   defp operation("-", [first, last], data) do
     {op1, op2} = cast_comparison_operator(resolve(first, data), resolve(last, data))
-
-    op1 - op2
+    subtract(op1, op2)
   end
 
   defp operation("-", [first], data) do
@@ -515,29 +509,27 @@ defmodule JsonLogic do
   defp operation("*", numbers, data) do
     numbers
     |> Enum.map(&resolve(&1, data))
-    |> Enum.reduce(1, fn
+    |> Enum.reduce_while(1, fn
       str, total when is_binary(str) ->
-        if String.match?(str, ~r/\./) do
-          {num, _} = Float.parse(str)
-          total * num
+        if numeric_string?(str) do
+          {:ok, num} = parse_number(str)
+          {:cont, multiply(num, total)}
         else
-          {num, _} = Integer.parse(str)
-          total * num
+          {:halt, nil}
         end
 
       num, total ->
-        total * num
+        {:cont, multiply(num, total)}
     end)
   end
 
   defp operation("/", [first, last], data) do
     {op1, op2} = cast_comparison_operator(resolve(first, data), resolve(last, data))
-
-    op1 / op2
+    divide(op1, op2)
   end
 
   defp operation("%", [first, last], data) do
-    Kernel.rem(resolve(first, data), resolve(last, data))
+    remainder(resolve(first, data), resolve(last, data))
   end
 
   defp operation("map", [list, map_action], data) do
@@ -706,22 +698,30 @@ defmodule JsonLogic do
     do: raise(ArgumentError, "Unrecognized operation `#{name}`")
 
   defp cast_comparison_operator(left, right) when is_number(left) and is_binary(right) do
-    case parse_number(right) do
-      {:ok, parsed} ->
-        {left, parsed}
+    if numeric_string?(right) do
+      case parse_number(right) do
+        {:ok, parsed} ->
+          {left, parsed}
 
-      _ ->
-        raise ArgumentError, "Unable to parse number `#{right}`"
+        _ ->
+          raise ArgumentError, "Unable to parse number `#{right}`"
+      end
+    else
+      {left, right}
     end
   end
 
   defp cast_comparison_operator(left, right) when is_binary(left) and is_number(right) do
-    case parse_number(left) do
-      {:ok, parsed} ->
-        {parsed, right}
+    if numeric_string?(left) do
+      case parse_number(left) do
+        {:ok, parsed} ->
+          {parsed, right}
 
-      _ ->
-        raise ArgumentError, "Unable to parse number `#{left}`"
+        _ ->
+          raise ArgumentError, "Unable to parse number `#{left}`"
+      end
+    else
+      {left, right}
     end
   end
 
@@ -741,7 +741,7 @@ defmodule JsonLogic do
 
   defp cast_comparison_operator(left, right), do: {left, right}
 
-  @numeric_regex ~r/^[\+-]?(\d+)((\.(\d+)([eE][\-\+]?(\d+))?))?$/
+  @numeric_regex ~r/^[\+-]?(\d+)((\.((\d+)([eE][\-\+]?(\d+))?)?))?$/
   defp numeric_string?(value), do: String.match?(value, @numeric_regex)
 
   defp parse_number(value) do
@@ -761,5 +761,362 @@ defmodule JsonLogic do
             :error
         end
     end
+  end
+
+  defp less_than(left, right) when is_float(left) and is_float(right),
+    do: left < right
+
+  defp less_than(left, right) when is_float(left),
+    do: less_than(Decimal.from_float(left), right)
+
+  defp less_than(left, right) when is_float(right),
+    do: less_than(left, Decimal.from_float(right))
+
+  defp less_than(left, right) when is_integer(left),
+    do: less_than(Decimal.new(left), right)
+
+  defp less_than(left, right) when is_integer(right),
+    do: less_than(left, Decimal.new(right))
+
+  defp less_than(left, right) when is_binary(left) do
+    if numeric_string?(left) do
+      less_than(Decimal.new(left), right)
+    else
+      false
+    end
+  end
+
+  defp less_than(left, right) when is_binary(right) do
+    if numeric_string?(right) do
+      less_than(left, Decimal.new(right))
+    else
+      false
+    end
+  end
+
+  defp less_than(%Decimal{} = left, %Decimal{} = right) do
+    case Decimal.compare(left, right) do
+      :lt -> true
+      :eq -> false
+      _ -> false
+    end
+  end
+
+  defp less_than(left, right), do: left < right
+
+  defp less_than_equal_to(left, right) when is_float(left) and is_float(right),
+    do: left <= right
+
+  defp less_than_equal_to(left, right) when is_float(left),
+    do: less_than_equal_to(Decimal.from_float(left), right)
+
+  defp less_than_equal_to(left, right) when is_float(right),
+    do: less_than_equal_to(left, Decimal.from_float(right))
+
+  defp less_than_equal_to(left, right) when is_integer(left),
+    do: less_than_equal_to(Decimal.new(left), right)
+
+  defp less_than_equal_to(left, right) when is_integer(right),
+    do: less_than_equal_to(left, Decimal.new(right))
+
+  defp less_than_equal_to(left, right) when is_binary(left) do
+    if numeric_string?(left) do
+      less_than_equal_to(Decimal.new(left), right)
+    else
+      false
+    end
+  end
+
+  defp less_than_equal_to(left, right) when is_binary(right) do
+    if numeric_string?(right) do
+      less_than_equal_to(left, Decimal.new(right))
+    else
+      false
+    end
+  end
+
+  defp less_than_equal_to(%Decimal{} = left, %Decimal{} = right) do
+    case Decimal.compare(left, right) do
+      :lt -> true
+      :eq -> true
+      _ -> false
+    end
+  end
+
+  defp less_than_equal_to(left, right), do: left <= right
+
+  defp greater_than(left, right) when is_float(left) and is_float(right),
+    do: left > right
+
+  defp greater_than(left, right) when is_float(left),
+    do: greater_than(Decimal.from_float(left), right)
+
+  defp greater_than(left, right) when is_float(right),
+    do: greater_than(left, Decimal.from_float(right))
+
+  defp greater_than(left, right) when is_integer(left),
+    do: greater_than(Decimal.new(left), right)
+
+  defp greater_than(left, right) when is_integer(right),
+    do: greater_than(left, Decimal.new(right))
+
+  defp greater_than(left, right) when is_binary(left) do
+    if numeric_string?(left) do
+      greater_than(Decimal.new(left), right)
+    else
+      false
+    end
+  end
+
+  defp greater_than(left, right) when is_binary(right) do
+    if numeric_string?(right) do
+      greater_than(left, Decimal.new(right))
+    else
+      false
+    end
+  end
+
+  defp greater_than(%Decimal{} = left, %Decimal{} = right) do
+    case Decimal.compare(left, right) do
+      :gt -> true
+      :eq -> false
+      _ -> false
+    end
+  end
+
+  defp greater_than(left, right), do: left > right
+
+  defp greater_than_equal_to(left, right) when is_float(left) and is_float(right),
+    do: left >= right
+
+  defp greater_than_equal_to(left, right) when is_float(left),
+    do: greater_than_equal_to(Decimal.from_float(left), right)
+
+  defp greater_than_equal_to(left, right) when is_float(right),
+    do: greater_than_equal_to(left, Decimal.from_float(right))
+
+  defp greater_than_equal_to(left, right) when is_integer(left),
+    do: greater_than_equal_to(Decimal.new(left), right)
+
+  defp greater_than_equal_to(left, right) when is_integer(right),
+    do: greater_than_equal_to(left, Decimal.new(right))
+
+  defp greater_than_equal_to(left, right) when is_binary(left) do
+    if numeric_string?(left) do
+      greater_than_equal_to(Decimal.new(left), right)
+    else
+      false
+    end
+  end
+
+  defp greater_than_equal_to(left, right) when is_binary(right) do
+    if numeric_string?(right) do
+      greater_than_equal_to(left, Decimal.new(right))
+    else
+      false
+    end
+  end
+
+  defp greater_than_equal_to(%Decimal{} = left, %Decimal{} = right) do
+    case Decimal.compare(left, right) do
+      :gt -> true
+      :eq -> true
+      _ -> false
+    end
+  end
+
+  defp greater_than_equal_to(left, right), do: left >= right
+
+  defp equal_to(left, right) when is_float(left),
+    do: equal_to(Decimal.from_float(left), right)
+
+  defp equal_to(left, right) when is_float(right),
+    do: equal_to(left, Decimal.from_float(right))
+
+  defp equal_to(left, right) when is_integer(left),
+    do: equal_to(Decimal.new(left), right)
+
+  defp equal_to(left, right) when is_integer(right),
+    do: equal_to(left, Decimal.new(right))
+
+  defp equal_to(left, right) when is_binary(left) do
+    if numeric_string?(left) do
+      equal_to(Decimal.new(left), right)
+    else
+      left == right
+    end
+  end
+
+  defp equal_to(left, right) when is_binary(right) do
+    if numeric_string?(right) do
+      equal_to(left, Decimal.new(right))
+    else
+      left == right
+    end
+  end
+
+  defp equal_to(left, right) when is_integer(left) and is_integer(right),
+    do: left == right
+
+  defp equal_to(%Decimal{} = left, %Decimal{} = right),
+    do: Decimal.compare(left, right) == :eq
+
+  defp equal_to(left, right), do: left == right
+
+  defp multiply(%Decimal{} = left, right) when is_float(right),
+    do: multiply(left, Decimal.from_float(right))
+
+  defp multiply(%Decimal{} = left, right) when is_integer(right),
+    do: multiply(left, Decimal.new(right))
+
+  defp multiply(left, %Decimal{} = right) when is_float(left),
+    do: multiply(Decimal.from_float(left), right)
+
+  defp multiply(left, %Decimal{} = right) when is_integer(left),
+    do: multiply(Decimal.new(left), right)
+
+  defp multiply(%Decimal{} = left, %Decimal{} = right),
+    do: Decimal.mult(left, right)
+
+  defp multiply(left, right) when is_binary(left) do
+    if numeric_string?(left) do
+      {:ok, parsed} = parse_number(left)
+      multiply(parsed, right)
+    end
+  end
+
+  defp multiply(left, right) when is_binary(right) do
+    if numeric_string?(right) do
+      {:ok, parsed} = parse_number(right)
+      multiply(left, parsed)
+    end
+  end
+
+  defp multiply(left, right), do: left * right
+
+  defp divide(%Decimal{} = left, right) when is_float(right),
+    do: divide(left, Decimal.from_float(right))
+
+  defp divide(%Decimal{} = left, right) when is_integer(right),
+    do: divide(left, Decimal.new(right))
+
+  defp divide(left, %Decimal{} = right) when is_float(left),
+    do: divide(Decimal.from_float(left), right)
+
+  defp divide(left, %Decimal{} = right) when is_integer(left),
+    do: divide(Decimal.new(left), right)
+
+  defp divide(%Decimal{} = left, %Decimal{} = right),
+    do: Decimal.div(left, right)
+
+  defp divide(left, right) when is_binary(left) do
+    if numeric_string?(left) do
+      {:ok, parsed} = parse_number(left)
+      divide(parsed, right)
+    end
+  end
+
+  defp divide(left, right) when is_binary(right) do
+    if numeric_string?(right) do
+      {:ok, parsed} = parse_number(right)
+      divide(left, parsed)
+    end
+  end
+
+  defp divide(left, right), do: left / right
+
+  defp subtract(left, right) when is_float(left),
+    do: subtract(Decimal.from_float(left), right)
+
+  defp subtract(left, right) when is_float(right),
+    do: subtract(left, Decimal.from_float(right))
+
+  defp subtract(%Decimal{} = left, right) when is_integer(right),
+    do: subtract(left, Decimal.new(right))
+
+  defp subtract(left, %Decimal{} = right) when is_integer(left),
+    do: subtract(Decimal.new(left), right)
+
+  defp subtract(%Decimal{} = left, %Decimal{} = right),
+    do: Decimal.sub(left, right)
+
+  defp subtract(left, right) when is_binary(left) do
+    if numeric_string?(left) do
+      {:ok, parsed} = parse_number(left)
+      subtract(parsed, right)
+    end
+  end
+
+  defp subtract(left, right) when is_binary(right) do
+    if numeric_string?(right) do
+      {:ok, parsed} = parse_number(right)
+      subtract(left, parsed)
+    end
+  end
+
+  defp subtract(left, right), do: left - right
+
+  defp add(left, right) when is_float(left),
+    do: add(Decimal.from_float(left), right)
+
+  defp add(left, right) when is_float(right),
+    do: add(left, Decimal.from_float(right))
+
+  defp add(left, %Decimal{} = right) when is_integer(left),
+    do: add(Decimal.new(left), right)
+
+  defp add(%Decimal{} = left, right) when is_integer(right),
+    do: add(left, Decimal.new(right))
+
+  defp add(%Decimal{} = left, %Decimal{} = right),
+    do: Decimal.add(left, right)
+
+  defp add(left, right) when is_binary(left) do
+    if numeric_string?(left) do
+      {:ok, parsed} = parse_number(left)
+      add(parsed, right)
+    end
+  end
+
+  defp add(left, right) when is_binary(right) do
+    if numeric_string?(right) do
+      {:ok, parsed} = parse_number(right)
+      add(left, parsed)
+    end
+  end
+
+  defp add(left, right), do: left + right
+
+  defp remainder(dividend, devisor) when is_float(dividend),
+    do: remainder(Decimal.from_float(dividend), devisor)
+
+  defp remainder(dividend, devisor) when is_float(devisor),
+    do: remainder(dividend, Decimal.from_float(devisor))
+
+  defp remainder(%Decimal{} = dividend, devisor) when is_integer(devisor),
+    do: remainder(dividend, Decimal.new(devisor))
+
+  defp remainder(dividend, %Decimal{} = devisor) when is_integer(dividend),
+    do: remainder(Decimal.new(dividend), devisor)
+
+  defp remainder(%Decimal{} = dividend, %Decimal{} = devisor),
+    do: Decimal.rem(dividend, devisor)
+
+  defp remainder(dividend, devisor) when is_binary(dividend) do
+    if numeric_string?(dividend) do
+      {:ok, parsed} = parse_number(dividend)
+      remainder(parsed, devisor)
+    end
+  end
+
+  defp remainder(dividend, devisor) when is_binary(devisor) do
+    if numeric_string?(devisor) do
+      {:ok, parsed} = parse_number(devisor)
+      remainder(dividend, parsed)
+    end
+  end
+
+  defp remainder(dividend, devisor) do
+    rem(dividend, devisor)
   end
 end

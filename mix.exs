@@ -7,6 +7,7 @@ defmodule JsonLogic.Mixfile do
     [
       app: :json_logic,
       package: package(),
+      aliases: aliases(),
       version: @version,
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
@@ -18,6 +19,17 @@ defmodule JsonLogic.Mixfile do
   def application do
     [
       extra_applications: [:logger]
+    ]
+  end
+
+  defp aliases do
+    [
+      lint: [
+        "format --check-formatted",
+        "deps.unlock --check-unused",
+        "credo --all --strict",
+        "dialyzer"
+      ]
     ]
   end
 

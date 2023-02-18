@@ -841,6 +841,16 @@ defmodule JsonLogicTest do
   end
 
   describe ">" do
+    test "comparison with variables" do
+      logic = %{">" => [%{"var" => "quantity"}, 25]}
+      data = %{"quantity" => 1}
+      assert JsonLogic.resolve(logic, data) == false
+
+      logic = %{">" => [%{"var" => "quantity"}, 25]}
+      data = %{"abc" => 1}
+      assert JsonLogic.resolve(logic, data) == false
+    end
+
     test "integer, float, and decimal comparisons" do
       ones = [Decimal.new("1.0"), "1.0", "1", 1.0, 1]
       twos = [Decimal.new("2.0"), "2.0", "2", 2.0, 2]

@@ -28,6 +28,7 @@ defmodule JsonLogic.Mixfile do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:decimal, ">= 0.0.0"},
       {:jason, "~> 1.0", only: [:dev, :test]},
       {:credo, "~> 0.8", only: [:dev, :test], runtime: false},
       {:ex_doc, ">= 0.0.0", only: :dev},

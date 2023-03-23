@@ -51,6 +51,8 @@ defmodule JsonLogic.Base do
 
   """
 
+  import JsonLogic.ImplHelpers
+
   @doc false
   def operations(),
     do: %{
@@ -106,20 +108,22 @@ defmodule JsonLogic.Base do
       def apply(logic, data \\ nil)
 
       # operations selector branch of apply
-      def apply(logic, data) when is_map(logic) and logic != %{} do
+      def apply(logic, data) when is_map(logic) and map_size(logic) == 1 do
         operation_name = logic |> Map.keys() |> List.first()
         values = logic |> Map.values() |> List.first()
 
         case Map.fetch(@all_ops, operation_name) do
           {:ok, value} -> Kernel.apply(__MODULE__, value, [values, data])
-          :error -> raise "Unrecognized operation `#{operation_name}`"
+          :error -> raise ArgumentError, "Unrecognized operation `#{operation_name}`"
         end
       end
 
-      # conclusive branch of apply
-      def apply(logic, _) do
-        logic
+      def apply(logic, data) when is_list(logic) do
+        operation_merge(logic, data)
       end
+
+      # conclusive branch of apply
+      def apply(logic, _), do: logic
 
       @doc false
       def operation_var("", data) do
@@ -206,7 +210,7 @@ defmodule JsonLogic.Base do
         {op1, op2} =
           cast_comparison_operator(__MODULE__.apply(left, data), __MODULE__.apply(right, data))
 
-        op1 == op2
+        equal_to(op1, op2)
       end
 
       @doc false
@@ -214,7 +218,7 @@ defmodule JsonLogic.Base do
         {op1, op2} =
           cast_comparison_operator(__MODULE__.apply(left, data), __MODULE__.apply(right, data))
 
-        op1 != op2
+        !equal_to(op1, op2)
       end
 
       @doc false
@@ -302,21 +306,85 @@ defmodule JsonLogic.Base do
       end
 
       @doc false
+      def operation_max([], _), do: nil
+
       def operation_max(list, data) do
-        list |> Enum.map(fn x -> __MODULE__.apply(x, data) end) |> Enum.max()
+        # When reducing the list of resolved json logic, we need to try to coerce it
+        # to a numeric value in order to find the largest number, but we need to
+        # ensure we return the resolved value, and not the coerced numeric value.
+        list
+        |> Enum.reduce_while([], fn element, acc ->
+          case __MODULE__.apply(element, data) do
+            %Decimal{} = resolved ->
+              {:cont, [{resolved, resolved} | acc]}
+
+            resolved when is_number(resolved) ->
+              {:cont, [{resolved, resolved} | acc]}
+
+            resolved when is_binary(resolved) ->
+              if numeric_string?(resolved) do
+                {:ok, parsed} = parse_number(resolved)
+                {:cont, [{resolved, parsed} | acc]}
+              else
+                {:halt, nil}
+              end
+          end
+        end)
+        |> case do
+          nil ->
+            nil
+
+          otherwise ->
+            otherwise
+            |> Enum.max_by(fn {_, num} -> num end, &greater_than_equal_to/2)
+            |> then(fn {resolved, _} -> resolved end)
+        end
       end
 
       @doc false
+      def operation_min([], _), do: nil
+
       def operation_min(list, data) do
-        list |> Enum.map(fn x -> __MODULE__.apply(x, data) end) |> Enum.min()
+        # When reducing the list of resolved json logic, we need to try to coerce it
+        # to a numeric value in order to find the smallest number, but we need to
+        # ensure we return the resolved value, and not the coerced numeric value.
+        list
+        |> Enum.reduce_while([], fn element, acc ->
+          case __MODULE__.apply(element, data) do
+            %Decimal{} = resolved ->
+              {:cont, [{resolved, resolved} | acc]}
+
+            resolved when is_number(resolved) ->
+              {:cont, [{resolved, resolved} | acc]}
+
+            resolved when is_binary(resolved) ->
+              if numeric_string?(resolved) do
+                {:ok, parsed} = parse_number(resolved)
+                {:cont, [{resolved, parsed} | acc]}
+              else
+                {:halt, nil}
+              end
+          end
+        end)
+        |> case do
+          nil ->
+            nil
+
+          otherwise ->
+            otherwise
+            |> Enum.min_by(fn {_, num} -> num end, &less_than_equal_to/2)
+            |> then(fn {resolved, _} -> resolved end)
+        end
       end
 
       @doc false
       def operation_less_than([left, right], data) do
-        {op1, op2} =
-          cast_comparison_operator(__MODULE__.apply(left, data), __MODULE__.apply(right, data))
-
-        op1 < op2
+        case cast_comparison_operator(__MODULE__.apply(left, data), __MODULE__.apply(right, data)) do
+          {nil, nil} -> true
+          {nil, _op2} -> false
+          {_op1, nil} -> false
+          {op1, op2} -> less_than(op1, op2)
+        end
       end
 
       @doc false
@@ -327,7 +395,12 @@ defmodule JsonLogic.Base do
 
       @doc false
       def operation_greater_than([left, right], data) do
-        !operation_less_than_or_equal([left, right], data)
+        case cast_comparison_operator(__MODULE__.apply(left, data), __MODULE__.apply(right, data)) do
+          {nil, nil} -> true
+          {nil, _op2} -> false
+          {_op1, nil} -> false
+          {op1, op2} -> greater_than(op1, op2)
+        end
       end
 
       @doc false
@@ -338,10 +411,12 @@ defmodule JsonLogic.Base do
 
       @doc false
       def operation_less_than_or_equal([left, right], data) do
-        {op1, op2} =
-          cast_comparison_operator(__MODULE__.apply(left, data), __MODULE__.apply(right, data))
-
-        op1 <= op2
+        case cast_comparison_operator(__MODULE__.apply(left, data), __MODULE__.apply(right, data)) do
+          {nil, nil} -> true
+          {nil, _op2} -> false
+          {_op1, nil} -> false
+          {op1, op2} -> less_than_equal_to(op1, op2)
+        end
       end
 
       @doc false
@@ -352,7 +427,12 @@ defmodule JsonLogic.Base do
 
       @doc false
       def operation_greater_than_or_equal([left, right], data) do
-        !operation_less_than([left, right], data)
+        case cast_comparison_operator(__MODULE__.apply(left, data), __MODULE__.apply(right, data)) do
+          {nil, nil} -> true
+          {nil, _op2} -> false
+          {_op1, nil} -> false
+          {op1, op2} -> greater_than_equal_to(op1, op2)
+        end
       end
 
       @doc false
@@ -365,19 +445,7 @@ defmodule JsonLogic.Base do
       def operation_addition(numbers, data) when is_list(numbers) do
         numbers
         |> Enum.map(&__MODULE__.apply(&1, data))
-        |> Enum.reduce(0, fn
-          str, total when is_binary(str) ->
-            if String.match?(str, ~r/\./) do
-              {num, _} = Float.parse(str)
-              total + num
-            else
-              {num, _} = Integer.parse(str)
-              total + num
-            end
-
-          num, total ->
-            total + num
-        end)
+        |> Enum.reduce(0, &add/2)
       end
 
       def operation_addition(numbers, data) do
@@ -385,34 +453,45 @@ defmodule JsonLogic.Base do
       end
 
       @doc false
+      def operation_subtraction([], data), do: nil
+
       def operation_subtraction([first, last], data) do
         {op1, op2} =
           cast_comparison_operator(__MODULE__.apply(first, data), __MODULE__.apply(last, data))
 
-        op1 - op2
+        subtract(op1, op2)
       end
 
-      @doc false
       def operation_subtraction([first], data) do
-        -__MODULE__.apply(first, data)
+        case __MODULE__.apply(first, data) do
+          resolved when is_number(resolved) ->
+            -resolved
+
+          resolved ->
+            if numeric_string?(resolved) do
+              {:ok, parsed} = parse_number(resolved)
+              -parsed
+            else
+              raise ArgumentError, "Unsupported operation `-` for `#{first}`"
+            end
+        end
       end
 
       @doc false
       def operation_multiplication(numbers, data) do
         numbers
         |> Enum.map(&__MODULE__.apply(&1, data))
-        |> Enum.reduce(1, fn
+        |> Enum.reduce_while(1, fn
           str, total when is_binary(str) ->
-            if String.match?(str, ~r/\./) do
-              {num, _} = Float.parse(str)
-              total * num
+            if numeric_string?(str) do
+              {:ok, num} = parse_number(str)
+              {:cont, multiply(num, total)}
             else
-              {num, _} = Integer.parse(str)
-              total * num
+              {:halt, nil}
             end
 
           num, total ->
-            total * num
+            {:cont, multiply(num, total)}
         end)
       end
 
@@ -421,12 +500,12 @@ defmodule JsonLogic.Base do
         {op1, op2} =
           cast_comparison_operator(__MODULE__.apply(first, data), __MODULE__.apply(last, data))
 
-        op1 / op2
+        divide(op1, op2)
       end
 
       @doc false
       def operation_remainder([first, last], data) do
-        Kernel.rem(__MODULE__.apply(first, data), __MODULE__.apply(last, data))
+        remainder(__MODULE__.apply(first, data), __MODULE__.apply(last, data))
       end
 
       @doc false
@@ -512,8 +591,9 @@ defmodule JsonLogic.Base do
 
       @doc false
       def operation_in([member, list], data) when is_list(list) do
-        members = list |> Enum.map(fn m -> __MODULE__.apply(m, data) end)
-        Enum.member?(members, __MODULE__.apply(member, data))
+        list
+        |> Enum.map(&__MODULE__.apply(&1, data))
+        |> Enum.member?(__MODULE__.apply(member, data))
       end
 
       @doc false
@@ -522,8 +602,12 @@ defmodule JsonLogic.Base do
       end
 
       @doc false
-      def operation_in([_, from], _) when is_nil(from) do
+      def operation_in([_, nil], _) do
         false
+      end
+
+      def operation_in([member, list], _) when not is_map(list) do
+        raise ArgumentError, "Cannot apply `in` to non-enumerable: `#{inspect([member, list])}`"
       end
 
       @doc false
@@ -563,18 +647,6 @@ defmodule JsonLogic.Base do
       def operation_log(logic, data) do
         __MODULE__.apply(logic, data)
       end
-
-      defp cast_comparison_operator(op1, op2) when is_number(op1) and is_binary(op2) do
-        {num_op2, _} = Float.parse(op2)
-        {op1, num_op2}
-      end
-
-      defp cast_comparison_operator(op1, op2) when is_binary(op1) and is_number(op2) do
-        {num_op1, _} = Float.parse(op1)
-        {num_op1, op2}
-      end
-
-      defp cast_comparison_operator(op1, op2), do: {op1, op2}
     end
   end
 end

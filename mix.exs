@@ -45,6 +45,7 @@ defmodule JsonLogic.Mixfile do
   defp deps do
     [
       {:decimal, ">= 0.0.0"},
+      {:benchee, "~> 1.1", only: :dev},
       {:credo, "~> 1.4", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.2.0", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.29", only: :dev, runtime: false}

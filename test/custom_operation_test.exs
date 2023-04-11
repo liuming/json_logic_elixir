@@ -1,4 +1,4 @@
-defmodule ExtensionsTest do
+defmodule CustomOperationTest do
   use ExUnit.Case, async: true
 
   # Ad-hoc module that extends JsonLogic with a custom operation.
@@ -19,7 +19,7 @@ defmodule ExtensionsTest do
     end
   end
 
-  describe "Extension" do
+  describe "Custom operation" do
     test "executes operation" do
       assert JsonLogicExt.apply(%{"is_42" => [42]})
       assert JsonLogicExt.apply(%{"is_42" => 42})

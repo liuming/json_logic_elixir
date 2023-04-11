@@ -24,7 +24,7 @@ iex> JsonLogic.apply(%{"log" => "value"})
 
 Detailed documentation can be found at [https://hexdocs.pm/json_logic](https://hexdocs.pm/json_logic).
 
-## Extensions / Custom Operators
+## Custom Operators
 
 To add custom operators to JsonLogic, implement them like in the following example:
 
@@ -49,4 +49,16 @@ defmodule MyApp.JsonLogic do
 end
 ```
 
-Then, remember to always use `MyApp.JsonLogic.apply` instead of just `JsonLogic.apply`.
+## Extensions
+
+Extensions can be used like this:
+
+```elixir
+defmodule MyApp.JsonLogic do
+  use JsonLogic.Base,
+    extensions: [JsonLogic.Extension.Obj]
+```
+
+Extensions can bring one or multiple operators. Using extensions is compatible with custom operators.
+
+See the [JsonLogic.Extension](lib/json_logic/extension.ex) for how to implement an extension.

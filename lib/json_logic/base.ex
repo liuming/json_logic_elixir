@@ -95,7 +95,19 @@ defmodule JsonLogic.Base do
 
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
-      @all_ops Map.merge(JsonLogic.Base.operations(), Keyword.get(opts, :operations, %{}))
+      extensions = Keyword.get(opts, :extensions, [])
+
+      # Merge available operations from base module, inline-extensions and extensions
+      @all_ops ([
+                  JsonLogic.Base.operations(),
+                  Keyword.get(opts, :operations, %{})
+                ] ++ Enum.map(extensions, fn extension -> extension.operations() end))
+               |> Enum.reduce(%{}, &Map.merge/2)
+
+      # Allow extensions to define their implementation functions
+      for module <- extensions do
+        Code.eval_quoted(module.gen_code(), [], __ENV__)
+      end
 
       @falsey [0, "", [], nil, false]
 

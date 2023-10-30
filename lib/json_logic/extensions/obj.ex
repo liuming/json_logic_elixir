@@ -41,6 +41,8 @@ defmodule JsonLogic.Extensions.Obj do
   """
   @behaviour JsonLogic.Extension
 
+  require Logger
+
   @impl true
   def operations,
     do: %{
@@ -50,10 +52,17 @@ defmodule JsonLogic.Extensions.Obj do
   @impl true
   def gen_code do
     quote do
+      require Logger
+
       def operation_obj(args, data) when is_list(args) do
         Enum.map(args, fn
-          arg when is_list(arg) ->
-            __MODULE__.apply(arg, data)
+          # Special case of a list-as-tuple entry that allows us to build lists (which would otherwise get flattened by
+          # JsonLogic) by keeping them wrapped in a list.
+          [key, args] ->
+            [__MODULE__.apply(key, data), __MODULE__.apply(args, data)]
+
+          # arg when is_list(arg) ->
+          #   __MODULE__.apply(arg, data)
 
           # Allow & execute operations, but ignore failure if there is no operation with that name.
           maybe_op when is_map(maybe_op) ->
@@ -64,7 +73,11 @@ defmodule JsonLogic.Extensions.Obj do
                 maybe_op
             end
 
-          _unsupported ->
+          unsupported ->
+            Logger.warning(
+              "JsonLogic: Unsupported argument for operator 'obj' #{inspect(unsupported)} in logic #{inspect(args, charlists: :as_lists)}}"
+            )
+
             []
         end)
         |> Enum.flat_map(&JsonLogic.Extensions.Obj.convert_to_tuples/1)
@@ -83,5 +96,9 @@ defmodule JsonLogic.Extensions.Obj do
 
   def convert_to_tuples(map) when is_map(map), do: map
 
-  def convert_to_tuples(_unsupported), do: []
+  def convert_to_tuples(unsupported) do
+    Logger.warning("JsonLogic: Unsupported argument for operator 'obj': #{inspect(unsupported)}")
+
+    []
+  end
 end

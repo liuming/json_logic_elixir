@@ -143,5 +143,28 @@ defmodule Extensions.ObjTest do
 
       assert %{"verbatim" => true} == Logic.apply(%{"obj" => %{"verbatim" => true}})
     end
+
+    test "builds object with list values" do
+      assert %{"labels" => ["foo1", "foo2"]} =
+               Logic.apply(%{
+                 "obj" => [
+                   ["labels", ["foo1", "foo2"]]
+                 ]
+               })
+    end
+
+    test "builds object with list values from var" do
+      assert %{"labels" => ["foo1", "foo2"]} =
+               Logic.apply(
+                 %{
+                   "obj" => [
+                     ["labels", %{"var" => "asset_labels"}]
+                   ]
+                 },
+                 %{
+                   "asset_labels" => ["foo1", "foo2"]
+                 }
+               )
+    end
   end
 end

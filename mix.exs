@@ -11,7 +11,7 @@ defmodule JsonLogic.Mixfile do
         licenses: ["MIT"]
       },
       docs: [main: "JsonLogic", extras: ["README.md"]],
-      version: "1.0.1",
+      version: "1.1.0",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps()

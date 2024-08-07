@@ -523,6 +523,25 @@ defmodule JsonLogic do
     end)
   end
 
+  defp operation("^", numbers, data) do
+    numbers
+    |> Enum.map(&resolve(&1, data))
+    |> Enum.reduce_while({nil, 0}, fn
+      number, {nil, total} ->
+        {:cont, {number, total}}
+      number, {base, total} when is_number(number) ->
+        {:cont, {base, total + number}}
+      _any, {base, _total} ->
+        {:halt, nil}
+    end)
+    |> case do
+      {base, total_exponent} when is_number(base) and is_number(total_exponent) ->
+        exponentiate(base, total_exponent)
+      _ ->
+        nil
+    end
+  end
+
   defp operation("/", [first, last], data) do
     {op1, op2} = cast_comparison_operator(resolve(first, data), resolve(last, data))
     divide(op1, op2)
@@ -993,6 +1012,42 @@ defmodule JsonLogic do
   end
 
   defp multiply(left, right), do: left * right
+
+  defp exponentiate(%Decimal{} = left, right) when is_float(right),
+    do: exponentiate(left, Decimal.from_float(right))
+
+  defp exponentiate(%Decimal{} = left, right) when is_integer(right),
+    do: exponentiate(left, Decimal.new(right))
+
+  defp exponentiate(left, %Decimal{} = right) when is_float(left),
+    do: exponentiate(Decimal.from_float(left), right)
+
+  defp exponentiate(left, %Decimal{} = right) when is_integer(left),
+    do: exponentiate(Decimal.new(left), right)
+
+  defp exponentiate(%Decimal{} = left, %Decimal{} = right),
+    do: Decimal.mult(left, right)
+
+  defp exponentiate(left, right) when is_binary(left) do
+    if numeric_string?(left) do
+      {:ok, parsed} = parse_number(left)
+      exponentiate(parsed, right)
+    end
+  end
+
+  defp exponentiate(left, right) when is_binary(right) do
+    if numeric_string?(right) do
+      {:ok, parsed} = parse_number(right)
+      exponentiate(left, parsed)
+    end
+  end
+
+  defp exponentiate(base, exponent) when is_number(base) and is_number(exponent) do
+  Float.pow(float(base), float(exponent))
+  end
+
+  defp float(value) when is_integer(value), do: value * 1.0
+  defp float(value) when is_float(value), do: value
 
   defp divide(%Decimal{} = left, right) when is_float(right),
     do: divide(left, Decimal.from_float(right))

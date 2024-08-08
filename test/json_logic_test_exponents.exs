@@ -15,28 +15,29 @@ defmodule JsonLogicTest do
 
     test "integer exponentiation" do
       assert JsonLogic.resolve(%{"^" => [1, 2]}) == 1.0
-      assert JsonLogic.resolve(%{"^" => [1, 2, 3]}) == 6
-      assert JsonLogic.resolve(%{"^" => [1, 2, 3, 4]}) == 24
+      assert JsonLogic.resolve(%{"^" => [1, 2, 3]}) == 1.0
+      assert JsonLogic.resolve(%{"^" => [1, 2, 3, 4]}) == 1.0
       assert JsonLogic.resolve(%{"^" => [1]}) == 1
 
-      assert JsonLogic.resolve(%{"^" => [1, "2"]}) == 2
-      assert JsonLogic.resolve(%{"^" => [1, 2, "3"]}) == 6
-      assert JsonLogic.resolve(%{"^" => [1, "2", "3", 4]}) == 24
+      assert JsonLogic.resolve(%{"^" => [2, "2"]}) == 4.0
+      assert JsonLogic.resolve(%{"^" => [2, 2, "3"]}) == 32.0
+      assert JsonLogic.resolve(%{"^" => [2, "2", "3", 4]}) == 512.0
       assert JsonLogic.resolve(%{"^" => ["1"]}) == 1
       assert JsonLogic.resolve(%{"^" => ["1", 1]}) == 1
     end
 
     test "float exponentiation" do
-      assert JsonLogic.resolve(%{"^" => [1.0, 2.0]}) == 2.0
-      assert JsonLogic.resolve(%{"^" => [1.0, 2.0, 3.0]}) == 6.0
-      assert JsonLogic.resolve(%{"^" => [1.0, 2.0, 3.0, 4.0]}) == 24.0
+      assert JsonLogic.resolve(%{"^" => [1.0, 2.0]}) == 1.0
+      assert JsonLogic.resolve(%{"^" => [1.0, 2.0, 3.0]}) == 1.0
+      assert JsonLogic.resolve(%{"^" => [1.0, 2.0, 3.0, 4.0]}) == 1.0
       assert JsonLogic.resolve(%{"^" => [1.0]}) == 1.0
 
-      assert JsonLogic.resolve(%{"^" => [1.0, "2.0"]}) == 2.0
-      assert JsonLogic.resolve(%{"^" => [1.0, 2.0, "3.0"]}) == 6.0
-      assert JsonLogic.resolve(%{"^" => [1.0, "2.0", "3.0", 4.0]}) == 24.0
+      assert JsonLogic.resolve(%{"^" => [1.0, "2.0"]}) == 1.0
+      assert JsonLogic.resolve(%{"^" => [1.0, 2.0, "3.0"]}) == 1.0
+      assert JsonLogic.resolve(%{"^" => [1.0, "2.0", "3.0", 4.0]}) == 1.0
       assert JsonLogic.resolve(%{"^" => ["1.0"]}) == 1.0
       assert JsonLogic.resolve(%{"^" => ["1.0", 1.0]}) == 1.0
+      assert JsonLogic.resolve(%{"^" => ["0.97", 5.0]}) == 0.8587340256999999
     end
 
     test "decimal exponentiation" do
@@ -60,10 +61,10 @@ defmodule JsonLogicTest do
         })
       )
 
-      assert JsonLogic.resolve(%{"^" => ["1", "foo"]}) == nil
-      assert JsonLogic.resolve(%{"^" => [1, "foo"]}) == nil
-      assert JsonLogic.resolve(%{"^" => [1.0, "foo"]}) == nil
-      assert JsonLogic.resolve(%{"^" => ["1.0", "foo"]}) == nil
+      assert JsonLogic.resolve(%{"^" => ["1", "foo"]}) == 1.0
+      assert JsonLogic.resolve(%{"^" => [1, "foo"]}) == 1.0
+      assert JsonLogic.resolve(%{"^" => [1.0, "foo"]}) == 1.0
+      assert JsonLogic.resolve(%{"^" => ["1.0", "foo"]}) == 1.0
       assert JsonLogic.resolve(%{"^" => ["foo", "1"]}) == nil
       assert JsonLogic.resolve(%{"^" => ["foo", 1]}) == nil
       assert JsonLogic.resolve(%{"^" => ["foo", 1.0]}) == nil
@@ -76,7 +77,7 @@ defmodule JsonLogicTest do
       logic = %{"map" => [%{"var" => "integers"}, %{"^" => [%{"var" => ""}, 2]}]}
       data = %{"integers" => [1, 2, 3, 4, 5]}
 
-      assert JsonLogic.resolve(logic, data) == [2, 4, 6, 8, 10]
+      assert JsonLogic.resolve(logic, data) == [1.0, 4.0, 9.0, 16.0, 25.0]
     end
   end
 
@@ -84,7 +85,7 @@ defmodule JsonLogicTest do
     test "filter, map, all, none, and some" do
       logic = %{"filter" => [%{"var" => "integers"}, true]}
       data = %{"integers" => [1, 2, 3]}
-      assert JsonLogic.resolve(logic, data) == [1.0, 4.0, 9.0]
+      assert JsonLogic.resolve(logic, data) == [1, 2, 3]
 
       logic = %{"filter" => [%{"var" => "integers"}, false]}
       data = %{"integers" => [1, 2, 3]}
@@ -100,7 +101,7 @@ defmodule JsonLogicTest do
 
       logic = %{"map" => [%{"var" => "integers"}, %{"^" => [%{"var" => ""}, 2]}]}
       data = %{"integers" => [1, 2, 3]}
-      assert JsonLogic.resolve(logic, data) == [2, 4, 6]
+      assert JsonLogic.resolve(logic, data) == [1.0, 4.0, 9.0]
 
       logic = %{"map" => [%{"var" => "integers"}, %{"^" => [%{"var" => ""}, 2]}]}
       assert JsonLogic.resolve(logic, nil) == []
@@ -148,7 +149,7 @@ defmodule JsonLogicTest do
       }
 
       data = %{"integers" => [1, 2, 3, 4]}
-      assert JsonLogic.resolve(logic, data) == 24
+      assert JsonLogic.resolve(logic, data) == 262144.0
 
       logic = %{
         "reduce" => [

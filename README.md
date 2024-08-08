@@ -1,6 +1,6 @@
 # JsonLogic
 
-[JsonLogic](http://jsonlogic.com/) implementation in Elixir
+[JsonLogic](http://jsonlogic.com/) implementation in Elixir forked, added support for exponential operation
 
 ## Installation
 

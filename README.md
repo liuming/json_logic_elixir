@@ -158,6 +158,24 @@ JsonLogic.resolve(%{"-" => [2]})
 JsonLogic.resolve(%{"*" => [2,3,4]})
 #=> 24
 
+JsonLogic.resolve(%{"^" => [2,7]})
+#=> 128.0
+
+JsonLogic.resolve(%{"^" => [0.97,7]})
+#=> 0.8079828447811298
+
+JsonLogic.resolve(%{"^" => [5,-6]})
+#=> 6.4e-5
+
+JsonLogic.resolve(%{"^" => [2,3,4]})
+#=> 128.0
+
+JsonLogic.resolve(%{"^" => [0.97,3,4]})
+#=> 0.8079828447811298
+
+JsonLogic.resolve(%{"^" => [5,-2, -4]})
+#=> 6.4e-5
+
 JsonLogic.resolve(%{"/" => [5,2]})
 #=> 2.5
 
@@ -166,6 +184,9 @@ JsonLogic.resolve(%{"%" => [7, 3]})
 
 JsonLogic.resolve(%{"map" => [[1,2,3,4,5], %{"*" => [%{"var" => ""}, 2]}]})
 #=> [2,4,6,8,10]
+
+JsonLogic.resolve(%{"map" => [[1,2,3,4,5], %{"^" => [%{"var" => ""}, 2]}]})
+#=> [1.0, 4.0, 9.0, 16.0, 25.0]
 
 JsonLogic.resolve(%{"filter" => [[1,2,3,4,5], %{">" => [%{"var" => ""}, 2]}]})
 #=> [3,4,5]

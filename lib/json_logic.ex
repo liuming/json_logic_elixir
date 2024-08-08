@@ -528,16 +528,56 @@ defmodule JsonLogic do
     |> Enum.map(&resolve(&1, data))
     |> Enum.reduce_while({nil, 0}, fn
       number, {nil, total} ->
+        IO.inspect(number, label: "base candidate")
         {:cont, {number, total}}
       number, {base, total} when is_number(number) ->
+        IO.inspect(number, label: "exponent candidate")
         {:cont, {base, total + number}}
-      _any, {base, _total} ->
-        {:halt, nil}
+      %Decimal{} = decimal, {base, total} ->
+        # Convert Decimal to float
+        number = Decimal.to_float(decimal)
+        IO.inspect(number, label: "converted decimal to number")
+        {:cont, {base, total + number}}
+      string, {base, total} when is_binary(string) ->
+        case parse_number(string) do
+          {:ok, number} ->
+            IO.inspect(number, label: "converted string to number")
+            {:cont, {base, total + number}}
+
+          :error ->
+            IO.inspect(string, label: "invalid string input")
+            {:cont, {base, total}}  # Continue accumulating valid base and exponents
+        end
+      _any, {base, total} ->
+        IO.inspect(_any, label: "invalid input")
+        {:cont, {base, total}}  # Continue accumulating valid base and exponents
     end)
     |> case do
-      {base, total_exponent} when is_number(base) and is_number(total_exponent) ->
-        exponentiate(base, total_exponent)
-      _ ->
+      {base, exponent} when is_number(base) and is_number(exponent) ->
+        IO.inspect({base, exponent}, label: "Base and Exponent before pow")
+        result = exponentiate(base, exponent)
+        IO.inspect(result, label: "Result of exponentiation")
+        result
+      {base, exponent} when is_binary(base) ->
+        # Convert base if it's a string
+        case parse_numeric(base) do
+          {:ok, base_number} ->
+            result = exponentiate(base_number, exponent)
+            IO.inspect(result, label: "Result of exponentiation after string conversion")
+            result
+          :error ->
+            IO.inspect({base, exponent}, label: "Invalid base or exponents, returning nil")
+            nil
+        end
+      {base, exponent} when is_struct(base, Decimal) ->
+          # Convert base from Decimal to float
+          base_float = Decimal.to_float(base)
+          IO.inspect({base_float, exponent}, label: "Base as float and Exponent before pow")
+          result = exponentiate(base_float, exponent)
+          IO.inspect(result, label: "Result of exponentiation after Decimal conversion")
+          result
+      {base, exponent} ->
+        IO.inspect({base, exponent}, label: "Invalid base or exponents, returning nil")
         nil
     end
   end
@@ -1013,37 +1053,52 @@ defmodule JsonLogic do
 
   defp multiply(left, right), do: left * right
 
-  defp exponentiate(%Decimal{} = left, right) when is_float(right),
-    do: exponentiate(left, Decimal.from_float(right))
+  defp exponentiate(%Decimal{} = left, right) when is_number(right) do
+    left_float = Decimal.to_float(left)
+    IO.inspect(left_float, label: "Converted Decimal to float")
+    exponentiate(left_float, right)
+  end
 
-  defp exponentiate(%Decimal{} = left, right) when is_integer(right),
-    do: exponentiate(left, Decimal.new(right))
-
-  defp exponentiate(left, %Decimal{} = right) when is_float(left),
-    do: exponentiate(Decimal.from_float(left), right)
-
-  defp exponentiate(left, %Decimal{} = right) when is_integer(left),
-    do: exponentiate(Decimal.new(left), right)
-
-  defp exponentiate(%Decimal{} = left, %Decimal{} = right),
-    do: Decimal.mult(left, right)
+  defp exponentiate(left, %Decimal{} = right) when is_number(left) do
+    right_float = Decimal.to_float(right)
+    IO.inspect(right_float, label: "Converted Decimal to float")
+    exponentiate(left, right_float)
+  end
 
   defp exponentiate(left, right) when is_binary(left) do
-    if numeric_string?(left) do
-      {:ok, parsed} = parse_number(left)
-      exponentiate(parsed, right)
+    case parse_numeric(left) do
+      {:ok, number} ->
+        IO.inspect(number, label: "Converted string to number")
+        exponentiate(number, right)
+      :error ->
+        IO.inspect(left, label: "Failed to parse numeric string")
+        nil
     end
   end
 
   defp exponentiate(left, right) when is_binary(right) do
-    if numeric_string?(right) do
-      {:ok, parsed} = parse_number(right)
-      exponentiate(left, parsed)
+    case parse_numeric(right) do
+      {:ok, number} ->
+        IO.inspect(number, label: "Converted string to number")
+        exponentiate(left, number)
+      :error ->
+        IO.inspect(right, label: "Failed to parse numeric string")
+        nil
     end
   end
 
   defp exponentiate(base, exponent) when is_number(base) and is_number(exponent) do
-  Float.pow(float(base), float(exponent))
+    IO.inspect({base, exponent}, label: "Base and Exponent before pow")
+    Float.pow(float(base), float(exponent))
+  end
+
+  defp parse_numeric(string) do
+    case Float.parse(string) do
+      {number, _} ->
+        {:ok, number}
+      :error ->
+        :error
+    end
   end
 
   defp float(value) when is_integer(value), do: value * 1.0

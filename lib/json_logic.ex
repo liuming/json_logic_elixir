@@ -1,4 +1,4 @@
-defmodule JsonLogic do
+defmodule JsonLogicExp do
   @moduledoc """
   An Elixir implementation of [JsonLogic](http://jsonlogic.com/).
   """

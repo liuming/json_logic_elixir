@@ -1,4 +1,4 @@
-# JsonLogic
+# JsonLogic with Exponent Operator
 
 [JsonLogic](http://jsonlogic.com/) implementation in Elixir forked, added support for exponential operation
 
@@ -9,7 +9,7 @@ This package can be installed by adding `json_logic` to your list of dependencie
 ```elixir
 def deps do
   [
-    {:json_logic, ">= 0.0.0"}
+    {:json_logic_exponent, ">= 0.0.0"}
   ]
 end
 ```

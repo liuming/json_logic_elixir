@@ -1,11 +1,11 @@
-defmodule JsonLogic.Mixfile do
+defmodule JsonLogicExp.Mixfile do
   use Mix.Project
 
   @version "1.0.0"
 
   def project do
     [
-      app: :json_logic,
+      app: :json_logic_exponent,
       package: package(),
       aliases: aliases(),
       version: @version,
@@ -35,9 +35,8 @@ defmodule JsonLogic.Mixfile do
 
   defp package do
     %{
-      description: "Elixir implementation of JsonLogic",
-      links: %{github: "https://github.com/liuming/json_logic"},
-      maintainers: ["Ming Liu"],
+      description: "Elixir implementation of JsonLogic, with exponent operator added \"^\"",
+      links: %{github: "https://github.com/Anglepoint-Engineering/json_logic_elixir_extended"},
       licenses: ["MIT"]
     }
   end
@@ -54,10 +53,10 @@ defmodule JsonLogic.Mixfile do
 
   defp docs do
     [
-      main: "JsonLogic",
+      main: "JsonLogicExp",
       extras: docs_extras(),
       source_ref: "v#{@version}",
-      source_url: "https://github.com/liuming/json_logic"
+      source_url: "https://github.com/Anglepoint-Engineering/json_logic_elixir_extended"
     ]
   end
 

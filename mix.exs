@@ -35,7 +35,7 @@ defmodule JsonLogicXL.Mixfile do
 
   defp package do
     %{
-      description: "Elixir implementation of JsonLogic, with exponent operator added \"^\"",
+      description: "Elixir implementation of JsonLogic, with some excel formulas added.",
       links: %{github: "https://github.com/Anglepoint-Engineering/json_logic_elixir_extended"},
       licenses: ["MIT"]
     }

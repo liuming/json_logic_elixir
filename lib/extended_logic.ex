@@ -152,12 +152,8 @@ defmodule JSONLogic_ExtendedOperations do
   @doc """
   implements the range_lookup operator
   """
-  def range_lookup_op([value, ranges | rest_of_list], data) do
-    default_val = if length(rest_of_list) > 0 do
-      Enum.at(rest_of_list, 0)
-    else
-      nil
-    end
+  def range_lookup_op([value, ranges], data), do: range_lookup_op([value, ranges, nil], data)
+  def range_lookup_op([value, ranges, default_value | _], data) do
     range_lookup(JsonLogicXL.resolve(value, data), JsonLogicXL.resolve(ranges, data),
       JsonLogicXL.resolve(default_val, data))
   end

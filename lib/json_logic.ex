@@ -698,6 +698,7 @@ defmodule JsonLogicXL do
   defp operation("^", numbers, data), do: JSONLogic_ExtendedOperations.exponent_op(numbers, data)
   defp operation("xlookup", logic, data), do: JSONLogic_ExtendedOperations.xlookup_op(logic, data)
   defp operation("ln", logic, data), do: JSONLogic_ExtendedOperations.natural_log_op(logic, data)
+  defp operation("range_lookup", logic, data), do: JSONLogic_ExtendedOperations.range_lookup_op(logic, data)
 
   defp operation(name, _logic, _data),
     do: raise(ArgumentError, "Unrecognized operation `#{name}`")

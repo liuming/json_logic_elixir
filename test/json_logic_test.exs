@@ -1959,6 +1959,52 @@ defmodule JsonLogicXLTest do
     end
   end
 
+  describe "range_lookup" do
+    test "happy path" do
+      logic = %{
+        "range_lookup" => [
+          %{ "var" => "num_servers" },
+          [
+            %{ "min" => nil, "max" => 500, "result" => 45 },
+            %{ "min" => 500, "max" => 1500, "result" => 75 },
+            %{ "min" => 1500, "max" => 5000, "result" => 170 },
+            %{ "min" => 5000, "max" => nil, "result" => "custom" }
+          ],
+          nil
+        ]
+      }
+      data = %{"num_servers" => 70}
+      assert JsonLogicXL.resolve(logic, data) == 45
+    end
+    test "default value when out of range" do
+      logic = %{
+        "range_lookup" => [12345,
+          [
+            %{ "min" => 0, "max" => 500, "result" => 45 },
+            %{ "min" => 500, "max" => 1500, "result" => 75 },
+          ],
+          "unknown"
+        ]
+      }
+      assert JsonLogicXL.resolve(logic) == "unknown"
+    end
+    test "no default val provided" do
+      logic = %{
+        "range_lookup" => [
+          %{ "var" => "num_servers" },
+          [
+            %{ "min" => nil, "max" => 500, "result" => 45 },
+            %{ "min" => 500, "max" => 1500, "result" => 75 },
+            %{ "min" => 1500, "max" => 5000, "result" => 170 },
+            %{ "min" => 5000, "max" => nil, "result" => "custom" }
+          ]
+        ]
+      }
+      data = %{"num_servers" => 70}
+      assert JsonLogicXL.resolve(logic, data) == 45
+    end
+  end
+
   defp assert_approx_eq(value1, value2) do
     assert_approx_eq(value1, value2, 1.0e-5)
   end

@@ -1,11 +1,11 @@
-defmodule JsonLogicExp.Mixfile do
+defmodule JsonLogicXL.Mixfile do
   use Mix.Project
 
   @version "1.0.0"
 
   def project do
     [
-      app: :json_logic_exponent,
+      app: :json_logic_plus_xl,
       package: package(),
       aliases: aliases(),
       version: @version,
@@ -53,7 +53,7 @@ defmodule JsonLogicExp.Mixfile do
 
   defp docs do
     [
-      main: "JsonLogicExp",
+      main: "JsonLogicXL",
       extras: docs_extras(),
       source_ref: "v#{@version}",
       source_url: "https://github.com/Anglepoint-Engineering/json_logic_elixir_extended"

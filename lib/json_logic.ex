@@ -1,4 +1,4 @@
-defmodule JsonLogicExp do
+defmodule JsonLogicXL do
   @moduledoc """
   An Elixir implementation of [JsonLogic](http://jsonlogic.com/).
   """
@@ -523,52 +523,6 @@ defmodule JsonLogicExp do
     end)
   end
 
-  defp operation("^", numbers, data) do
-    numbers
-    |> Enum.map(&resolve(&1, data))
-    |> Enum.reduce_while({nil, 0}, fn
-      number, {nil, total} ->
-        {:cont, {number, total}}
-      number, {base, total} when is_number(number) ->
-        {:cont, {base, total + number}}
-      %Decimal{} = decimal, {base, total} ->
-        # Convert Decimal to float
-        number = Decimal.to_float(decimal)
-        {:cont, {base, total + number}}
-      string, {base, total} when is_binary(string) ->
-        case parse_number(string) do
-          {:ok, number} ->
-            {:cont, {base, total + number}}
-
-          :error ->
-            {:cont, {base, total}}  # Continue accumulating valid base and exponents
-        end
-      _any, {base, total} ->
-        {:cont, {base, total}}  # Continue accumulating valid base and exponents
-    end)
-    |> case do
-      {base, exponent} when is_number(base) and is_number(exponent) ->
-        result = exponentiate(base, exponent)
-        result
-      {base, exponent} when is_binary(base) ->
-        # Convert base if it's a string
-        case parse_numeric(base) do
-          {:ok, base_number} ->
-            result = exponentiate(base_number, exponent)
-            result
-          :error ->
-            nil
-        end
-      {base, exponent} when is_struct(base, Decimal) ->
-          # Convert base from Decimal to float
-          base_float = Decimal.to_float(base)
-          result = exponentiate(base_float, exponent)
-          result
-      {base, exponent} ->
-        nil
-    end
-  end
-
   defp operation("/", [first, last], data) do
     {op1, op2} = cast_comparison_operator(resolve(first, data), resolve(last, data))
     divide(op1, op2)
@@ -739,6 +693,11 @@ defmodule JsonLogicExp do
   end
 
   defp operation("log", logic, data), do: resolve(logic, data)
+
+  # Extensions to JsonLogic
+  defp operation("^", numbers, data), do: JSONLogic_ExtendedOperations.exponent_op(numbers, data)
+  defp operation("xlookup", logic, data), do: JSONLogic_ExtendedOperations.xlookup_op(logic, data)
+  defp operation("ln", logic, data), do: JSONLogic_ExtendedOperations.natural_log_op(logic, data)
 
   defp operation(name, _logic, _data),
     do: raise(ArgumentError, "Unrecognized operation `#{name}`")
@@ -1039,50 +998,6 @@ defmodule JsonLogicExp do
   end
 
   defp multiply(left, right), do: left * right
-
-  defp exponentiate(%Decimal{} = left, right) when is_number(right) do
-    left_float = Decimal.to_float(left)
-    exponentiate(left_float, right)
-  end
-
-  defp exponentiate(left, %Decimal{} = right) when is_number(left) do
-    right_float = Decimal.to_float(right)
-    exponentiate(left, right_float)
-  end
-
-  defp exponentiate(left, right) when is_binary(left) do
-    case parse_numeric(left) do
-      {:ok, number} ->
-        exponentiate(number, right)
-      :error ->
-        nil
-    end
-  end
-
-  defp exponentiate(left, right) when is_binary(right) do
-    case parse_numeric(right) do
-      {:ok, number} ->
-        exponentiate(left, number)
-      :error ->
-        nil
-    end
-  end
-
-  defp exponentiate(base, exponent) when is_number(base) and is_number(exponent) do
-    Float.pow(float(base), float(exponent))
-  end
-
-  defp parse_numeric(string) do
-    case Float.parse(string) do
-      {number, _} ->
-        {:ok, number}
-      :error ->
-        :error
-    end
-  end
-
-  defp float(value) when is_integer(value), do: value * 1.0
-  defp float(value) when is_float(value), do: value
 
   defp divide(%Decimal{} = left, right) when is_float(right),
     do: divide(left, Decimal.from_float(right))

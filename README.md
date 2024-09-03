@@ -1,15 +1,17 @@
-# JsonLogic with Exponent Operator
+# JsonLogicXL - JsonLogic with excel formulas
 
-[JsonLogic](http://jsonlogic.com/) implementation in Elixir forked, added support for exponential operation
+[JsonLogic](http://jsonlogic.com/) implementation in Elixir forked, added some excel formulas such as the power operator `^`, a matching case operator `xlookup`, and natural log operator `ln`.
+
+Adding excel formulas as needed, not all excel formulas are implemented.
 
 ## Installation
 
-This package can be installed by adding `json_logic` to your list of dependencies in `mix.exs`:
+This package can be installed by adding `json_logic_plus_xl` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:json_logic_exponent, ">= 0.0.0"}
+    {:json_logic_plus_xl, ">= 0.0.0"}
   ]
 end
 ```

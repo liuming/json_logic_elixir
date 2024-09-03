@@ -145,8 +145,40 @@ defmodule JSONLogic_ExtendedOperations do
     {:ok, num} = parse_number(val)
     natural_log(num)
   end
-
   defp natural_log(val) when is_number(val) do
     :math.log(val)
+  end
+
+  @doc """
+  implements the range_lookup operator
+  """
+  def range_lookup_op([value, ranges | rest_of_list], data) do
+    default_val = if length(rest_of_list) > 0 do
+      Enum.at(rest_of_list, 0)
+    else
+      nil
+    end
+    range_lookup(JsonLogicXL.resolve(value, data), JsonLogicXL.resolve(ranges, data),
+      JsonLogicXL.resolve(default_val, data))
+  end
+
+  defp range_lookup(value, ranges, default_val)
+  defp range_lookup(value, ranges, default_val) when is_binary(value) do
+    {:ok, num} = parse_number(value)
+    range_lookup(num, ranges, default_val)
+  end
+  defp range_lookup(value, ranges, default_val) when is_number(value) and is_list(ranges) do
+    res = Enum.find_value(ranges, fn x ->
+      min_check = x["min"] == nil || value >= x["min"]
+      max_check = x["max"] == nil || value < x["max"]
+      if min_check && max_check do
+        x["result"]
+      end
+    end)
+    if res != nil do
+      res
+    else
+      default_val
+    end
   end
 end

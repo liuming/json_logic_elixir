@@ -2005,6 +2005,16 @@ defmodule JsonLogicXLTest do
     end
   end
 
+  describe "eulers exponent 'exp'" do
+    test "get eulers constant" do
+      assert_approx_eq(JsonLogicXL.resolve(%{"exp" => 1}), 2.7182818284590)
+    end
+
+    test "eulers squared divided by 1.5" do
+      assert_approx_eq(JsonLogicXL.resolve(%{"/" => [%{"exp" => 2}, 1.5]}), 4.9260373992871)
+    end
+  end
+
   defp assert_approx_eq(value1, value2) do
     assert_approx_eq(value1, value2, 1.0e-5)
   end

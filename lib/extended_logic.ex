@@ -155,7 +155,7 @@ defmodule JSONLogic_ExtendedOperations do
   def range_lookup_op([value, ranges], data), do: range_lookup_op([value, ranges, nil], data)
   def range_lookup_op([value, ranges, default_value | _], data) do
     range_lookup(JsonLogicXL.resolve(value, data), JsonLogicXL.resolve(ranges, data),
-      JsonLogicXL.resolve(default_val, data))
+      JsonLogicXL.resolve(default_value, data))
   end
 
   defp range_lookup(value, ranges, default_val)
@@ -176,5 +176,20 @@ defmodule JSONLogic_ExtendedOperations do
     else
       default_val
     end
+  end
+
+  @eulers_constant 2.7182818284590452353602874713526624977572470936999595749669676277
+  @doc """
+  raises eulers number to a power passed in.
+  Similar to Excel's "exp" function.
+  """
+  def eulers_exponent_op(val, data), do: eulers_exponent(JsonLogicXL.resolve(val, data))
+
+  defp eulers_exponent(val) when is_binary(val) do
+    {:ok, num} = parse_number(val)
+    eulers_exponent(num)
+  end
+  defp eulers_exponent(val) when is_number(val) do
+    @eulers_constant ** val
   end
 end

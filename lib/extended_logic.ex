@@ -123,7 +123,7 @@ defmodule JSONLogic_ExtendedOperations do
       JsonLogicXL.resolve(map_key_prop, data), JsonLogicXL.resolve(map_val_prop, data))
   end
 
-  defguardp xlookup_guard(match, opts, k_prop, v_prop) when is_binary(match) and is_list(opts)
+  defguardp xlookup_guard(match, opts, k_prop, v_prop) when (is_binary(match) or is_number(match)) and is_list(opts)
     and is_binary(k_prop) and is_binary(v_prop)
 
   defp xlookup(match, options, key_prop, val_prop) when

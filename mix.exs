@@ -36,7 +36,7 @@ defmodule JsonLogic.Mixfile do
   defp package do
     %{
       description: "Elixir implementation of JsonLogic",
-      links: %{github: "https://github.com/liuming/json_logic"},
+      links: %{github: "https://github.com/liuming/json_logic_elixir"},
       maintainers: ["Ming Liu"],
       licenses: ["MIT"]
     }
